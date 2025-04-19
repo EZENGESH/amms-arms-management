@@ -1,0 +1,89 @@
+services:
+  # Frontend Service (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - amms-network
+
+  # Backend Service (Django)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/venv
+    environment:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+      - DB_HOST=db
+      - DB_NAME=amms_db
+      - DB_USER=amms_user
+      - DB_PASSWORD=cherono08
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - db
+    networks:
+      - amms-network
+
+  # Database Service (MySQL)
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    volumes:
+      - amms-mysql-data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=amms_db
+      - MYSQL_USER=amms_user
+      - MYSQL_PASSWORD=cherono08
+    networks:
+      - amms-network
+
+  # Redis Service (Optional for caching)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - amms-network
+
+  # Celery Service (Optional for async tasks)
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+    networks:
+      - amms-network
+
+volumes:
+  amms-mysql-data:
+
+networks:
+  amms-network:
+    driver: bridge
