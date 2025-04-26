@@ -92,5 +92,5 @@ docker compose up --build
 
 ## 📄 License
 
-> (If needed later: Add your project license here — MIT, GPL, etc.)
+> (to be added latter.)
 
