@@ -18,42 +18,69 @@ services:
       - amms-network
 
   # Backend Service (Django)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - /app/venv
-    environment:
-      - DJANGO_SETTINGS_MODULE=backend.settings
-      - DB_HOST=db
-      - DB_NAME=amms_db
-      - DB_USER=amms_user
-      - DB_PASSWORD=cherono08
-      - ALLOWED_HOSTS=localhost,127.0.0.1
-    depends_on:
-      - db
-    networks:
-      - amms-network
+version: '3.8'
 
-  # Database Service (MySQL)
-  db:
-    image: mysql:8.0
+services:
+  user-service:
+    build: ./user-service
     ports:
-      - "3306:3306"
-    volumes:
-      - amms-mysql-data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=amms_db
-      - MYSQL_USER=amms_user
-      - MYSQL_PASSWORD=cherono08
+      - "8001:8000"
+    env_file:
+      - ./user-service/.env
     networks:
-      - amms-network
+      - amms
+
+  inventory-service:
+    build: ./inventory-service
+    ports:
+      - "8002:8000"
+    env_file:
+      - ./inventory-service/.env
+    networks:
+      - amms
+
+  requisition-service:
+    build: ./requisition-service
+    ports:
+      - "8003:8000"
+    env_file:
+      - ./requisition-service/.env
+    networks:
+      - amms
+
+  reporting-service:
+    build: ./reporting-service
+    ports:
+      - "8004:8000"
+    env_file:
+      - ./reporting-service/.env
+    networks:
+      - amms
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - amms
+    depends_on:
+      - user-service
+      - inventory-service
+      - requisition-service
+      - reporting-service
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - amms
+    depends_on:
+      - api-gateway
+
+networks:
+  amms:
+    driver: bridge
 
   # Redis Service (Optional for caching)
   redis:
@@ -68,7 +95,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    command: celery -A config worker -l info
+    command: celery -A ammsbackend worker --loglevel=info
     volumes:
       - ./backend:/app
     environment:

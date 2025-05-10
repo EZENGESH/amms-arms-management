@@ -1,0 +1,5 @@
+Django>=4.2               # Django framework, version 4.2 or higher
+djangorestframework       # Django REST framework for building APIs
+python-decouple           # For managing environment variables
+gunicorn                  # WSGI HTTP server for deploying Python web applications
+mysqlclient               # MySQL database connector for Python

@@ -1,10 +1,56 @@
 import axios from 'axios';
-
 const api = axios.create({
-  baseURL: '/', // Ensure this is correct
+  baseURL: 'http://localhost:8000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-const USE_MOCK_API = true; // Ensure this is set to true
+// Add request interceptor to include token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        const response = await axios.post(
+          'http://localhost:8000/api/auth/token/refresh/',
+          { refresh: refreshToken }
+        );
+        
+        localStorage.setItem('access_token', response.data.access);
+        originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+        return api(originalRequest);
+      } catch (err) {
+        console.error('Refresh token failed:', err);
+        // Redirect to login or handle logout
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+
+const USE_MOCK_API = false; // Ensure this is set to true
 
 if (USE_MOCK_API) {
   const setupMock = async () => {

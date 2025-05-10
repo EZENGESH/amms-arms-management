@@ -1,0 +1,28 @@
+services:
+  reporting-db:
+    image: mysql:8.0
+    container_name: reporting-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: reporting_db
+      MYSQL_USER: reporting_db
+      MYSQL_PASSWORD: securepassword
+      MYSQL_ROOT_PASSWORD: rootsecret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  reporting-service:
+    build: .
+    container_name: reporting-service
+    env_file:
+      - .env
+    depends_on:
+      - reporting-db
+    ports:
+      - "8004:8000"
+
+volumes:
+  mysql-data:
+    driver: local

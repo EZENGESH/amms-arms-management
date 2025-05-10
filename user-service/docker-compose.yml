@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  user-service:
+    build:
+      context: .
+    container_name: user-service
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env  # Load environment variables from the .env file
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: "${DJANGO_DB_NAME}"  # Use variables from .env
+      MYSQL_USER: "${DJANGO_DB_USER}"
+      MYSQL_PASSWORD: "${DJANGO_DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "rootpassword"  # You can also move this to .env if needed
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
