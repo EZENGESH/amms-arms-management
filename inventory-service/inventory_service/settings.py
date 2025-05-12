@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+import os
 from decouple import config
 from pathlib import Path
 
@@ -132,3 +133,10 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')  # Redis as the message broker
+CELERY_ACCEPT_CONTENT = ['json']  # Accept JSON-encoded tasks
+CELERY_TASK_SERIALIZER = 'json'  # Serialize tasks as JSON
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')  # Store task results in Redis
+CELERY_TIMEZONE = 'UTC'  # Set the timezone for Celery

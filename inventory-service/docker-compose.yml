@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # MySQL Database for Inventory Service
   db:
     image: mysql:8.0
     container_name: inventory_db
@@ -14,18 +15,31 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
+  # Inventory Service (Django Application)
   web:
     build:
       context: .
     container_name: inventory_service
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py check --database default &&
+      python manage.py migrate &&
+      gunicorn --bind 0.0.0.0:8000 \
+      --workers 2 \
+      --timeout 120 \
+      inventory_service.wsgi:application"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
+      - redis
     environment:
       DJANGO_DB_HOST: db
       DJANGO_DB_PORT: 3306
@@ -36,5 +50,46 @@ services:
       DJANGO_DEBUG: ${DJANGO_DEBUG}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
 
+  # Redis Service (Message Broker for Celery)
+  redis:
+    image: redis:alpine
+    container_name: inventory_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Celery Worker Service
+  celery:
+    build:
+      context: .
+    container_name: inventory_celery
+    command: celery -A inventory_service worker --loglevel=info
+    depends_on:
+      - redis
+      - db
+    environment:
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3306
+      DJANGO_DB_NAME: ${DJANGO_DB_NAME}
+      DJANGO_DB_USER: ${DJANGO_DB_USER}
+      DJANGO_DB_PASSWORD: ${DJANGO_DB_PASSWORD}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    networks:
+      - backend-network
+
 volumes:
   db_data:
+
+networks:
+  backend-network:
+    driver: bridge

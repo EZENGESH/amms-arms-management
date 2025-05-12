@@ -7,20 +7,21 @@ ENV PYTHONUNBUFFERED=1
 # Install system dependencies required for mysqlclient
 RUN apt-get update && apt-get install -y \
     gcc \
+    libmariadb-dev \
     default-libmysqlclient-dev \
     pkg-config \
     build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean
 
-# Set work directory
+# Set the working directory
 WORKDIR /app
 
-# Install Python dependencies
+# Copy the requirements file and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# Copy the application code
 COPY . .
 
-# Run Django server (or customize with entrypoint/cmd)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Set the default command to run the Celery worker
+CMD ["celery", "-A", "reporting_service", "worker", "--loglevel=info"]

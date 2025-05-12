@@ -3,4 +3,6 @@ djangorestframework
 python-decouple
 requests
 mysqlclient
+celery==5.3.6
+redis==4.6.0
 

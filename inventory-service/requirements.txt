@@ -3,3 +3,5 @@ djangorestframework
 python-decouple
 mysqlclient>=2.2
 gunicorn>=21.2
+celery==5.3.6
+redis==4.6.0

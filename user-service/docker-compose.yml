@@ -1,33 +1,76 @@
 version: "3.8"
 
 services:
-  user-service:
-    build:
-      context: .
-    container_name: user-service
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app
+  redis:
+    image: redis:alpine
     ports:
-      - "8001:8000"
-    env_file:
-      - .env  # Load environment variables from the .env file
-    depends_on:
-      - db
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   db:
     image: mysql:8.0
-    container_name: mysql-db
-    restart: always
+    command: 
+      - --default-authentication-plugin=mysql_native_password
+      - --host_cache_size=0
     environment:
-      MYSQL_DATABASE: "${DJANGO_DB_NAME}"  # Use variables from .env
+      MYSQL_DATABASE: "${DJANGO_DB_NAME}"
       MYSQL_USER: "${DJANGO_DB_USER}"
       MYSQL_PASSWORD: "${DJANGO_DB_PASSWORD}"
-      MYSQL_ROOT_PASSWORD: "rootpassword"  # You can also move this to .env if needed
+      MYSQL_ROOT_PASSWORD: "${DJANGO_DB_ROOT_PASSWORD}"
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DJANGO_DB_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  user-service:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 user_service.wsgi:application"
+
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery-worker:
+    build: .
+    command: sh -c "sleep 10 && celery -A user_service worker --loglevel=info"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery-beat:
+    build: .
+    command: sh -c "sleep 10 && celery -A user_service beat --loglevel=info"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
 volumes:
   db_data:
+  redis_data:
+  

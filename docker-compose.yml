@@ -1,5 +1,136 @@
+version: '3.8'
+
 services:
-  # Frontend Service (React)
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - "8001:8000"
+    env_file:
+      - ./user-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - user-db
+
+  # User Database
+  user-db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: user_db
+      MYSQL_USER: user_service_user
+      MYSQL_PASSWORD: user_service_password
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - user-mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: ./inventory-service
+    ports:
+      - "8002:8000"
+    env_file:
+      - ./inventory-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - inventory-db
+
+  # Inventory Database
+  inventory-db:
+    image: mysql:5.7
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_DATABASE: inventory_db
+      MYSQL_USER: inventory_service_user
+      MYSQL_PASSWORD: inventory_service_password
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - inventory-mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+
+  # Requisition Service
+  requisition-service:
+    build:
+      context: ./requisition-service
+    ports:
+      - "8005:8000"
+    env_file:
+      - ./requisition-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - requisition-db
+
+  # Requisition Database
+  requisition-db:
+    image: mysql:5.7
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_DATABASE: requisition_db
+      MYSQL_USER: requisition_service_user
+      MYSQL_PASSWORD: requisition_service_password
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - requisition-mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+
+  # Reporting Service
+  reporting-service:
+    build:
+      context: ./reporting-service
+    ports:
+      - "8004:8000"
+    env_file:
+      - ./reporting-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - reporting-db
+
+  # Reporting Database
+  reporting-db:
+    image: mysql:5.7
+    ports:
+      - "3310:3306"
+    environment:
+      MYSQL_DATABASE: reporting_db
+      MYSQL_USER: reporting_service_user
+      MYSQL_PASSWORD: reporting_service_password
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - reporting-mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8081:8080"
+    networks:
+      - frontend-network
+      - backend-network
+    depends_on:
+      - user-service
+      - inventory-service
+      - requisition-service
+      - reporting-service
+    env_file:
+      - ./api-gateway/.env
+
+  # Frontend Service
   frontend:
     build:
       context: ./frontend
@@ -9,108 +140,30 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - REACT_APP_API_URL=http://backend:8000
-    depends_on:
-      - backend
-    networks:
-      - amms-network
-
-  # Backend Service (Django)
-version: '3.8'
-
-services:
-  user-service:
-    build: ./user-service
-    ports:
-      - "8001:8000"
     env_file:
-      - ./user-service/.env
-    networks:
-      - amms
-
-  inventory-service:
-    build: ./inventory-service
-    ports:
-      - "8002:8000"
-    env_file:
-      - ./inventory-service/.env
-    networks:
-      - amms
-
-  requisition-service:
-    build: ./requisition-service
-    ports:
-      - "8003:8000"
-    env_file:
-      - ./requisition-service/.env
-    networks:
-      - amms
-
-  reporting-service:
-    build: ./reporting-service
-    ports:
-      - "8004:8000"
-    env_file:
-      - ./reporting-service/.env
-    networks:
-      - amms
-
-  api-gateway:
-    build: ./api-gateway
-    ports:
-      - "8080:8080"
-    networks:
-      - amms
-    depends_on:
-      - user-service
-      - inventory-service
-      - requisition-service
-      - reporting-service
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    networks:
-      - amms
+      - ./frontend/.env
     depends_on:
       - api-gateway
+    networks:
+      - frontend-network
 
-networks:
-  amms:
-    driver: bridge
-
-  # Redis Service (Optional for caching)
+  # Redis Service
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
     networks:
-      - amms-network
-
-  # Celery Service (Optional for async tasks)
-  celery:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    command: celery -A ammsbackend worker --loglevel=info
-    volumes:
-      - ./backend:/app
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DB_HOST=db
-      - REDIS_HOST=redis
-    depends_on:
-      - db
-      - redis
-    networks:
-      - amms-network
+      - backend-network
 
 volumes:
-  amms-mysql-data:
+  user-mysql-data:
+  inventory-mysql-data:
+  requisition-mysql-data:
+  reporting-mysql-data:
+  celery-data:
 
 networks:
-  amms-network:
+  frontend-network:
+    driver: bridge
+  backend-network:
     driver: bridge

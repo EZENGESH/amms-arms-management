@@ -2,3 +2,5 @@ Django>=4.2
 djangorestframework
 python-decouple
 mysqlclient
+celery==5.3.6
+redis==4.6.0

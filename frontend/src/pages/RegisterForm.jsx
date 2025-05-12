@@ -33,11 +33,6 @@ export default function RegisterForm() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
     try {
       await registerUser({
         service_number: formData.serviceNumber,
@@ -46,29 +41,11 @@ export default function RegisterForm() {
         email: formData.email,
         username: formData.username,
         password: formData.password,
-         confirm_password: formData.confirmPassword,
       });
       setSuccess(true);
+    } catch (err) {
+      setError(err.response?.data || 'An error occurred during registration');
     }
-    catch (err) {
-  console.error("Registration error:", err);
-  let errorMessage = 'Registration failed';
-  
-  if (err.email) {
-    errorMessage = err.email.join(' ');
-  } else if (err.username) {
-    errorMessage = err.username.join(' ');
-  } else if (err.password) {
-    errorMessage = err.password.join(' ');
-  } else if (typeof err === 'object') {
-    errorMessage = JSON.stringify(err);
-  } else if (err) {
-    errorMessage = err.toString();
-  }
-  
-  setError(errorMessage);
-}
-
   };
 
   return (
@@ -76,11 +53,7 @@ export default function RegisterForm() {
       <div className="w-full max-w-md bg-white p-8 rounded shadow">
         <h1 className="text-2xl font-bold text-center mb-6">Register</h1>
         {error && <p className="text-red-500 text-center">{error}</p>}
-        {success && (
-          <p className="text-green-500 text-center">
-            Registration successful!
-          </p>
-        )}
+        {success && <p className="text-green-500 text-center">Registration successful!</p>}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <input
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
