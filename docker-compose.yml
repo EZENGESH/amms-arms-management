@@ -12,22 +12,56 @@ services:
     networks:
       - backend-network
     depends_on:
-      - user-db
+      - db
+    command: >
+      sh -c "until nc -z db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
+    restart: unless-stopped
 
   # User Database
-  user-db:
+  db:
     image: mysql:8.0
     ports:
       - "3307:3306"
     environment:
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
       MYSQL_DATABASE: user_db
       MYSQL_USER: user_service_user
       MYSQL_PASSWORD: user_service_password
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_INITDB_SKIP_TZ: 1
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
       - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  # User Celery
+  user-celery:
+    build:
+      context: ./user-service
+    command: celery -A user_service worker --loglevel=info --concurrency=4
+    depends_on:
+      - redis
+      - db
+    environment:
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3306
+      DJANGO_DB_NAME: user_db
+      DJANGO_DB_USER: user_service_user
+      DJANGO_DB_PASSWORD: user_service_password
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    networks:
+      - backend-network
+    restart: unless-stopped
 
   # Inventory Service
   inventory-service:
@@ -41,49 +75,65 @@ services:
       - backend-network
     depends_on:
       - inventory-db
+    command: >
+      sh -c "until nc -z inventory-db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+    restart: unless-stopped
 
   # Inventory Database
   inventory-db:
-    image: mysql:5.7
+    image: mysql:8.0
     ports:
       - "3308:3306"
     environment:
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
       MYSQL_DATABASE: inventory_db
       MYSQL_USER: inventory_service_user
       MYSQL_PASSWORD: inventory_service_password
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_INITDB_SKIP_TZ: 1
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
       - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
 
   # Requisition Service
   requisition-service:
     build:
       context: ./requisition-service
     ports:
-      - "8005:8000"
+      - "8003:8000"
     env_file:
       - ./requisition-service/.env
     networks:
       - backend-network
     depends_on:
       - requisition-db
+    restart: unless-stopped
 
-  # Requisition Database
   requisition-db:
-    image: mysql:5.7
+    image: mysql:8.0
     ports:
       - "3309:3306"
     environment:
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
       MYSQL_DATABASE: requisition_db
       MYSQL_USER: requisition_service_user
       MYSQL_PASSWORD: requisition_service_password
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_INITDB_SKIP_TZ: 1
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
       - backend-network
+    restart: unless-stopped
 
   # Reporting Service
   reporting-service:
@@ -97,21 +147,24 @@ services:
       - backend-network
     depends_on:
       - reporting-db
+    restart: unless-stopped
 
-  # Reporting Database
   reporting-db:
-    image: mysql:5.7
+    image: mysql:8.0
     ports:
       - "3310:3306"
     environment:
+      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
       MYSQL_DATABASE: reporting_db
       MYSQL_USER: reporting_service_user
       MYSQL_PASSWORD: reporting_service_password
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_INITDB_SKIP_TZ: 1
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
       - backend-network
+    restart: unless-stopped
 
   # API Gateway
   api-gateway:
@@ -125,42 +178,50 @@ services:
     depends_on:
       - user-service
       - inventory-service
-      - requisition-service
-      - reporting-service
     env_file:
       - ./api-gateway/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Service
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
   # Frontend Service
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    env_file:
-      - ./frontend/.env
-    depends_on:
-      - api-gateway
     networks:
       - frontend-network
-
-  # Redis Service
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - backend-network
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
 
 volumes:
   user-mysql-data:
   inventory-mysql-data:
+  redis-data:
   requisition-mysql-data:
   reporting-mysql-data:
-  celery-data:
 
 networks:
   frontend-network:
