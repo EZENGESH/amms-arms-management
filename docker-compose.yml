@@ -26,9 +26,9 @@ services:
       - "3307:3306"
     environment:
       MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
-      MYSQL_DATABASE: user_db
-      MYSQL_USER: user_service_user
-      MYSQL_PASSWORD: user_service_password
+      MYSQL_DATABASE: user_service_db
+      MYSQL_USER: user_db
+      MYSQL_PASSWORD: securepassword
       MYSQL_ROOT_PASSWORD: root
       MYSQL_INITDB_SKIP_TZ: 1
     volumes:
@@ -125,8 +125,8 @@ services:
     environment:
       MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
       MYSQL_DATABASE: requisition_db
-      MYSQL_USER: requisition_service_user
-      MYSQL_PASSWORD: requisition_service_password
+      MYSQL_USER: user_requisition_db
+      MYSQL_PASSWORD: securepassword
       MYSQL_ROOT_PASSWORD: root
       MYSQL_INITDB_SKIP_TZ: 1
     volumes:

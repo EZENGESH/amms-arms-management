@@ -1,76 +1,68 @@
-version: "3.8"
+version: "3.9"
 
 services:
-  redis:
-    image: redis:alpine
+  user-service:
+    build: .
+    container_name: user-service
+    env_file:
+      - .env
     ports:
-      - "6379:6379"
+      - "8001:8000"
+    depends_on:
+      - db
+      - redis
     volumes:
-      - redis_data:/data
+      - .:/app
+      - staticfiles:/app/staticfiles
 
   db:
     image: mysql:8.0
-    command: 
-      - --default-authentication-plugin=mysql_native_password
-      - --host_cache_size=0
+    container_name: db
+    restart: always
     environment:
-      MYSQL_DATABASE: "${DJANGO_DB_NAME}"
-      MYSQL_USER: "${DJANGO_DB_USER}"
-      MYSQL_PASSWORD: "${DJANGO_DB_PASSWORD}"
-      MYSQL_ROOT_PASSWORD: "${DJANGO_DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: ${DJANGO_DB_NAME}
+      MYSQL_USER: ${DJANGO_DB_USER}
+      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DJANGO_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE_HOST: ${DJANGO_DB_HOST}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DJANGO_DB_ROOT_PASSWORD}"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
+      - user-mysql-data:/var/lib/mysql
 
-  user-service:
-    build: .
-    command: >
-      sh -c "python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 user_service.wsgi:application"
-
+  redis:
+    image: redis:7-alpine
+    container_name: redis
     ports:
-      - "8001:8000"
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
 
   celery-worker:
     build: .
-    command: sh -c "sleep 10 && celery -A user_service worker --loglevel=info"
-    volumes:
-      - .:/app
+    container_name: celery-worker
     env_file:
       - .env
+    command: celery -A user_service worker --loglevel=info
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      - db
+      - redis
+    volumes:
+      - .:/app
 
   celery-beat:
     build: .
-    command: sh -c "sleep 10 && celery -A user_service beat --loglevel=info"
-    volumes:
-      - .:/app
+    container_name: celery-beat
     env_file:
       - .env
+    command: celery -A user_service beat --loglevel=info
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      - db
+      - redis
+    volumes:
+      - .:/app
 
 volumes:
-  db_data:
-  redis_data:
-  
+  user-mysql-data:
+  redis-data:
+  staticfiles:

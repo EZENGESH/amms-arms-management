@@ -87,6 +87,7 @@ DATABASES = {
         'HOST': config('DJANGO_DB_HOST', default='localhost'),
         'PORT': config('DJANGO_DB_PORT', default='3306'),
         'OPTIONS': {
+            'auth_plugins': ['caching_sha2_password'],
             'charset': 'utf8mb4',
         },
     }
@@ -128,6 +129,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
