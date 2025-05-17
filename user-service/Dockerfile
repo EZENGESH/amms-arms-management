@@ -25,9 +25,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the rest of the application
 COPY . .
 
-# Now collect static files
-RUN python manage.py collectstatic --noinput
-
 # Your other commands (CMD, EXPOSE, etc.)
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
