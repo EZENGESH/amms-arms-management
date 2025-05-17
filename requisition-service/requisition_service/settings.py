@@ -87,7 +87,6 @@ DATABASES = {
         'OPTIONS': {
             'charset': 'utf8mb4', # Use utf8mb4 for full Unicode support
             'init_command': "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
-            'auth_plugins': ['caching_sha2_password'],
         },
     }
 }
