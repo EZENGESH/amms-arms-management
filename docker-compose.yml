@@ -19,18 +19,12 @@ services:
       gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
     restart: unless-stopped
 
-  # User Database
   db:
     image: mysql:8.0
     ports:
       - "3307:3306"
-    environment:
-      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
-      MYSQL_DATABASE: user_service_db
-      MYSQL_USER: user_db
-      MYSQL_PASSWORD: securepassword
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_INITDB_SKIP_TZ: 1
+    env_file:
+      - ./user-service/db.env
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
@@ -42,7 +36,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # User Celery
   user-celery:
     build:
       context: ./user-service
@@ -51,12 +44,11 @@ services:
       - redis
       - db
     environment:
-      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
       DJANGO_DB_HOST: db
       DJANGO_DB_PORT: 3306
-      DJANGO_DB_NAME: user_db
-      DJANGO_DB_USER: user_service_user
-      DJANGO_DB_PASSWORD: user_service_password
+      DJANGO_DB_NAME: user_service_db
+      DJANGO_DB_USER: user_db
+      DJANGO_DB_PASSWORD: securepassword
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     networks:
@@ -81,18 +73,12 @@ services:
       gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
     restart: unless-stopped
 
-  # Inventory Database
   inventory-db:
     image: mysql:8.0
     ports:
       - "3308:3306"
-    environment:
-      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
-      MYSQL_DATABASE: inventory_db
-      MYSQL_USER: inventory_service_user
-      MYSQL_PASSWORD: inventory_service_password
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_INITDB_SKIP_TZ: 1
+    env_file:
+      - ./inventory-service/db.env
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
@@ -122,13 +108,8 @@ services:
     image: mysql:8.0
     ports:
       - "3309:3306"
-    environment:
-      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
-      MYSQL_DATABASE: requisition_db
-      MYSQL_USER: user_requisition_db
-      MYSQL_PASSWORD: securepassword
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_INITDB_SKIP_TZ: 1
+    env_file:
+      - ./requisition-service/db.env
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
@@ -153,13 +134,8 @@ services:
     image: mysql:8.0
     ports:
       - "3310:3306"
-    environment:
-      MYSQL_DEFAULT_AUTHENTICATION_PLUGIN: caching_sha2_password
-      MYSQL_DATABASE: reporting_db
-      MYSQL_USER: reporting_service_user
-      MYSQL_PASSWORD: reporting_service_password
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_INITDB_SKIP_TZ: 1
+    env_file:
+      - ./reporting-service/db.env
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
@@ -172,14 +148,14 @@ services:
       context: ./api-gateway
     ports:
       - "8081:8080"
+    env_file:
+      - ./api-gateway/.env
     networks:
       - frontend-network
       - backend-network
     depends_on:
       - user-service
       - inventory-service
-    env_file:
-      - ./api-gateway/.env
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
