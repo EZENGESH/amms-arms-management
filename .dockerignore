@@ -19,3 +19,5 @@ coverage/
 .idea
 *.swp
 docker-compose.override.yml
+mysql/data/
+**/mysql/data/
