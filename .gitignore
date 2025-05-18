@@ -73,16 +73,11 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
-**/*.env
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
-# Env files for services
-/user-service/*.env
-/inventory-service/*.env
-/requisition-service/*.env
-/reporting-service/*.env
+
 
 
 # parcel-bundler cache (https://parceljs.org/)
