@@ -7,18 +7,19 @@ services:
     container_name: inventory_db
     restart: always
     environment:
+    
       MYSQL_DATABASE: ${DJANGO_DB_NAME}
       MYSQL_USER: ${DJANGO_DB_USER}
       MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE_HOST: ${DJANGO_DB_HOST}
-      MYSQL_DATABASE_PORT: 3306
 
     ports:
       - "3306:3306"
 
     volumes:
       - db_data:/var/lib/mysql
+      # Bind mount for MySQL config or data (example, adjust path as needed)
+      - ./mysql/conf.d:/etc/mysql/conf.d
       
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -31,19 +32,16 @@ services:
     build:
       context: .
     command: >
-      sh -c "python manage.py check --database default &&
+      sh -c "while ! nc -z db 3306; do sleep 1; done &&
       python manage.py migrate &&
-      gunicorn --bind 0.0.0.0:8000 \
-      --workers 2 \
-      --timeout 120 \
-      inventory_service.wsgi:application"
+      gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
     volumes:
-      - .:/app
+      - .:/app               
       - static_volume:/app/staticfiles
+      - ./logs:/app/logs
     ports:
       - "8002:8000"
     depends_on:
-      - db
       - redis
     environment:
       DJANGO_DB_HOST: ${DJANGO_DB_HOST}
@@ -68,6 +66,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    # Example: bind mount for Redis config
+    volumes:
+      - ./redis-data:/data
 
   # Celery Worker Service
   celery:
@@ -77,7 +78,6 @@ services:
     command: celery -A inventory_service worker --loglevel=info
     depends_on:
       - redis
-      - db
     environment:
       DJANGO_DB_HOST: db
       DJANGO_DB_PORT: 3306
@@ -90,8 +90,10 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
-      - .:/app
+      - .:/app                # Bind mount project source code
       - static_volume:/app/staticfiles
+      # Example: bind mount for logs
+      - ./logs:/app/logs
     networks:
       - backend-network
 
