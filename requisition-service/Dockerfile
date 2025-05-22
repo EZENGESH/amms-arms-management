@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     default-libmysqlclient-dev \
     pkg-config \
     build-essential \
+    default-mysql-client \
     && apt-get clean
 
 # Set the working directory
@@ -23,5 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . .
 
-# Set the default command to run the Celery worker
-CMD ["celery", "-A", "reporting_service", "worker", "--loglevel=info"]
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Set the default command to run the application
+CMD ["gunicorn", "requisition_service.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

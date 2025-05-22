@@ -2,31 +2,46 @@ version: '3.8'
 
 services:
   # Requisition Service (Django Application)
-  web:
+  requisition-service:
     build:
       context: .
+      dockerfile: Dockerfile  # Explicit Dockerfile reference
     container_name: requisition_service
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "until mysql -h db -u $$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 5; done &&
+      python manage.py migrate &&
+      gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     volumes:
       - .:/app
+      - static_volume:/app/staticfiles
     ports:
       - "8003:8000"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
-      DJANGO_DB_HOST: db
-      DJANGO_DB_PORT: 3306
-      DJANGO_DB_NAME: ${DJANGO_DB_NAME}
-      DJANGO_DB_USER: ${DJANGO_DB_USER}
-      DJANGO_DB_PASSWORD: ${DJANGO_DB_PASSWORD}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: ${DJANGO_DEBUG}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      - DJANGO_DB_HOST=db  # Hardcoded to service name
+      - DJANGO_DB_PORT=3306
+      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
+      - DJANGO_DB_USER=${DJANGO_DB_USER}
+      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Redis Service (Message Broker for Celery)
   redis:
-    image: redis:alpine
+    image: redis:7.2-alpine  # Pinned version
     container_name: requisition_redis
     ports:
       - "6379:6379"
@@ -37,53 +52,74 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    volumes:
+      - redis_data:/data
 
   # Celery Worker Service
   celery:
     build:
       context: .
     container_name: requisition_celery
-    command: celery -A requisition_service worker --loglevel=info
+    command: celery -A requisition_service worker --loglevel=info --concurrency=4
     depends_on:
       - redis
       - db
     environment:
-      DJANGO_DB_HOST: db
-      DJANGO_DB_PORT: 3306
-      DJANGO_DB_NAME: ${DJANGO_DB_NAME}
-      DJANGO_DB_USER: ${DJANGO_DB_USER}
-      DJANGO_DB_PASSWORD: ${DJANGO_DB_PASSWORD}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: ${DJANGO_DEBUG}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      - DJANGO_DB_HOST=db
+      - DJANGO_DB_PORT=3306
+      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
+      - DJANGO_DB_USER=${DJANGO_DB_USER}
+      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - backend-network
+    healthcheck:
+      test: ["CMD", "celery", "-A", "requisition_service", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # MySQL Database for Requisition Service
   db:
     image: mysql:8.0
     container_name: requisition_db
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DJANGO_DB_NAME}
       MYSQL_USER: ${DJANGO_DB_USER}
       MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+      - ./mysql-config:/etc/mysql/conf.d
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+    networks:
+      - backend-network
 
 volumes:
   db_data:
+    driver: local
+  static_volume:
+    driver: local
+  redis_data:
+    driver: local
 
 networks:
   backend-network:
     driver: bridge
+    name: amms_backend  # Explicit network name

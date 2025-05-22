@@ -20,6 +20,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY wait_for_db.py .
+RUN pip install pymysql
+
 # Copy the application code
 COPY . .
 

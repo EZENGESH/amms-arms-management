@@ -7,7 +7,7 @@ SERVICES = {
     "user": "http://user-service:8000",
     "inventory": "http://inventory-service:8000",
     "requisition": "http://requisition-service:8000",
-    "reporting": "http://reporting-service:8000"
+    "reporting": "http://reporting-service:8000",
 }
 
 class ProxyView(APIView):

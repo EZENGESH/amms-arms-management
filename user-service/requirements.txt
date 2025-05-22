@@ -1,24 +1,9 @@
-# Core Django
-Django>=4.2,<5.0  # Stay on LTS or latest stable 4.x
-djangorestframework>=3.14,<4.0  # Compatible with Django 4.2
-python-decouple>=3.8  # For env vars
-
-# Database
-mysqlclient==2.2.7  # Fixed for compatibility
-
-# ASGI/WSGI Server (Production)
-gunicorn>=21.2,<22.0  # Stable WSGI
-uvicorn>=0.23,<1.0  # Optional for ASGI (if using Django Channels)
-
-# Celery + Redis (Async Tasks)
-celery==5.3.6  # Pinned for stability
-redis==4.6.0  # Pinned (Celery 5.3.x works with Redis 4.x)
-django-celery-results==2.6.0  # Task results in Django DB
-django-celery-beat==2.6.0  # Scheduled tasks
-
-# Caching (Optional)
-django-redis==5.3.0  # If using Redis cache backend
-
-# Security (Recommended)
-bcrypt>=4.0.1  # For password hashing
-cryptography>=42.0  # Encrypted fields/secrets
+Django>=4.2
+djangorestframework
+python-decouple
+mysqlclient
+gunicorn>=21.2
+redis==4.6.0
+celery>=5.2
+django-celery-beat>=2.5.0
+django-celery-results>=2.5.0

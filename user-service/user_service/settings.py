@@ -43,8 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'user_service',      
-    
     # Third-party apps
     'rest_framework',
     'rest_framework.authtoken',
@@ -52,7 +50,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     
     # Local apps
-    
+    'user_service',
 ]
 
 MIDDLEWARE = [
@@ -142,10 +140,7 @@ USE_TZ = True
 # STATIC FILES
 # ========================
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # ========================
 # DEFAULT PRIMARY KEY
 # ========================
