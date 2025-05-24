@@ -1,17 +1,33 @@
+version: "3.9"
+
 services:
   reporting-db:
     image: mysql:8.0
     container_name: reporting-db
     restart: always
-    environment:
-      MYSQL_DATABASE: reporting_db
-      MYSQL_USER: reporting_db
-      MYSQL_PASSWORD: securepassword
-      MYSQL_ROOT_PASSWORD: rootsecret
+    env_file:
+      - .env
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: reporting-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   reporting-service:
     build: .
@@ -20,9 +36,29 @@ services:
       - .env
     depends_on:
       - reporting-db
+      - redis
     ports:
       - "8004:8000"
+    command: >
+      sh -c "python wait_for_db.py &&
+      gunicorn --bind 0.0.0.0:8000 reporting_service.wsgi:application"
+    volumes:
+      - .:/app
+
+  celery:
+    build: .
+    container_name: reporting-celery
+    env_file:
+      - .env
+    depends_on:
+      - reporting-db
+      - redis
+    command: >
+      sh -c "python wait_for_db.py &&
+      celery -A reporting_service worker --loglevel=info"
+    restart: always
+    volumes:
+      - .:/app
 
 volumes:
   mysql-data:
-    driver: local
