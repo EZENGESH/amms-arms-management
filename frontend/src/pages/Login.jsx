@@ -29,21 +29,23 @@ export default function Login() {
       }
 
       // Send login request
-      const response = await api.post('/api/auth/login/', credentials);
+      // Use direct service endpoint when not using API gateway
+      const endpoint = 'http://localhost:8001/api/auth/login/'; // Direct user service endpoint
+      const response = await api.post(endpoint, credentials);
 
       // Validate response
-      if (!response?.data?.access) {
+      if (!response?.data?.token) {
         throw new Error('Invalid server response');
       }
 
       // Store tokens
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh || '');
-
+      localStorage.setItem('access_token', response.data.token);
+      
       // Store user data in context
       login({
         username: credentials.username,
-        token: response.data.access
+        token: response.data.token,
+        user: response.data.user
       });
 
       // Redirect to dashboard
@@ -63,9 +65,9 @@ export default function Login() {
       } else if (error.request) {
         // No response received
         errorMessage = 'No response from server. Check your connection.';
-      } else if (error.message) {
-        // Custom validation error
-        errorMessage = error.message;
+      } else {
+        // Handle unexpected errors
+        errorMessage = error.message || 'An unexpected error occurred.';
       }
 
       setError(errorMessage);
@@ -106,6 +108,17 @@ export default function Login() {
           {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
+      
+      <div className="mt-6 text-center">
+        <p className="text-gray-600 mb-3">Don't have an account?</p>
+        <Button 
+          onClick={() => navigate('/register')}
+          disabled={isLoading}
+          className="w-full bg-green-500 hover:bg-green-700"
+        >
+          Create New Account
+        </Button>
+      </div>
     </AuthLayout>
   );
 }

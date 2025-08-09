@@ -1,24 +1,71 @@
 import api from './apiClient';
 
-let mockToken = null; // Simulate token storage
-
-export function setToken(token) {
-  mockToken = token;
-}
-
-export function clearToken() {
-  mockToken = null;
-}
-
 export async function getInventory() {
-  if (!mockToken) {
-    throw new Error('No token found. Please log in first.');
+  try {
+    const response = await api.get('/api/inventory/arms/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    throw error;
   }
+}
 
-  const response = await api.get('/inventory/', {
-    headers: {
-      Authorization: `Bearer ${mockToken}`, // Use the token
-    },
-  });
-  return response.data;
+export async function getInventoryByType(type) {
+  try {
+    const response = await api.get(`/api/inventory/arms/by_type/?type=${type}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching inventory by type:', error);
+    throw error;
+  }
+}
+
+export async function getInventoryDashboard() {
+  try {
+    const response = await api.get('/api/inventory/arms/dashboard/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching inventory dashboard:', error);
+    throw error;
+  }
+}
+
+export async function searchInventory(query) {
+  try {
+    const response = await api.get(`/api/inventory/arms/search/?q=${query}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error searching inventory:', error);
+    throw error;
+  }
+}
+
+export async function addFirearm(firearmData) {
+  try {
+    const response = await api.post('/api/inventory/arms/', firearmData);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding firearm:', error);
+    throw error;
+  }
+}
+
+export async function updateFirearm(id, firearmData) {
+  try {
+    const response = await api.put(`/api/inventory/arms/${id}/`, firearmData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating firearm:', error);
+    throw error;
+  }
+}
+
+export async function deleteFirearm(id) {
+  try {
+    const response = await api.delete(`/api/inventory/arms/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting firearm:', error);
+    throw error;
+  }
 }

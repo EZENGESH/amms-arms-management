@@ -1,5 +1,6 @@
 Django>=4.2
 djangorestframework
+django-filter
 python-decouple
 mysqlclient>=2.2
 gunicorn>=21.2

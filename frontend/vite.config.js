@@ -10,7 +10,7 @@ export default defineConfig({
     port: 5173,        // Port for the Vite development server
     proxy: {
       '/api': {
-        target: 'http://localhost:8000/api/register', // Proxy API requests to the backend
+        target: 'http://localhost:8001/api/user/register', // Proxy API requests to the backend
         changeOrigin: true,
         secure: false,
       },

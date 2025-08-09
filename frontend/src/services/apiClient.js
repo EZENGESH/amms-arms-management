@@ -1,6 +1,11 @@
 import axios from 'axios';
+// Configuration for API endpoints
+const USE_API_GATEWAY = false; // Set to true when API gateway is working
+const API_GATEWAY_URL = 'http://localhost:8081';
+const USER_SERVICE_URL = 'http://localhost:8001';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: USE_API_GATEWAY ? API_GATEWAY_URL : USER_SERVICE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +31,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    if (error.response.status === 401 && !originalRequest._retry) {
+    // Only attempt token refresh if we have a response and it's a 401 error
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
