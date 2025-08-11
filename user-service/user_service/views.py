@@ -93,20 +93,25 @@ class RegisterView(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    # This is the important part - allow anyone to access the login endpoint
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
         
-        # Problem: authenticate might be failing if user doesn't exist
         user = authenticate(username=username, password=password)
-        
-        # Add debugging
-        if not user:
-            print(f"Authentication failed for username: {username}")
-            return Response({"error": "Invalid credentials"}, status=400)
-        
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({"token": token.key})
+        if user:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user_id': user.pk,
+                'username': user.username
+            })
+        return Response(
+            {'error': 'Invalid credentials'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
         
 class LogoutView(APIView):
     """

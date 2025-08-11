@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AuthLayout from '../layouts/AuthLayout';
 import Button from '../components/Button';
-import api from '../services/apiClient';
+import { loginUser } from '../services/auth';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -23,54 +23,22 @@ export default function Login() {
     };
 
     try {
-      // Basic validation
-      if (!credentials.username || !credentials.password) {
-        throw new Error('Username and password are required');
-      }
-
-      // Send login request
-      // Use direct service endpoint when not using API gateway
-      const endpoint = 'http://localhost:8001/api/auth/login/'; // Direct user service endpoint
-      const response = await api.post(endpoint, credentials);
-
-      // Validate response
-      if (!response?.data?.token) {
+      const response = await loginUser(credentials);
+      
+      if (!response?.token) {
         throw new Error('Invalid server response');
       }
 
-      // Store tokens
-      localStorage.setItem('access_token', response.data.token);
-      
-      // Store user data in context
+      localStorage.setItem('access_token', response.token);
       login({
         username: credentials.username,
-        token: response.data.token,
-        user: response.data.user
+        token: response.token,
+        user: response.user
       });
 
-      // Redirect to dashboard
       navigate('/dashboard', { replace: true });
-
     } catch (error) {
-      console.error('Login error:', error);
-      
-      // Handle different error scenarios
-      let errorMessage = 'Login failed. Please try again.';
-      
-      if (error.response) {
-        // Server responded with error status
-        errorMessage = error.response.data?.detail || 
-                      error.response.data?.message ||
-                      `Server error: ${error.response.status}`;
-      } else if (error.request) {
-        // No response received
-        errorMessage = 'No response from server. Check your connection.';
-      } else {
-        // Handle unexpected errors
-        errorMessage = error.message || 'An unexpected error occurred.';
-      }
-
-      setError(errorMessage);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -80,11 +48,7 @@ export default function Login() {
     <AuthLayout>
       <h1 className="text-xl font-semibold mb-4">Login to AMMS</h1>
       
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
-          {error}
-        </div>
-      )}
+      {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       
       <form className="space-y-4" onSubmit={handleSubmit}>
         <input

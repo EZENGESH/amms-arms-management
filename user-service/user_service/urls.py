@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views as token_views
-from rest_framework import routers
 from . import views
 
 # API router
-router = routers.DefaultRouter()
+router = DefaultRouter()
+# You can add router.register() statements here if needed
 
 # Define URL patterns
 urlpatterns = [
@@ -32,8 +33,8 @@ urlpatterns = [
     path('api/registrations/<int:pk>/approve/', views.RegistrationApproveView.as_view(), name='registration-approve'),
     path('api/registrations/<int:pk>/reject/', views.RegistrationRejectView.as_view(), name='registration-reject'),
     
-    # Include router URLs
-    path('api/', include(router.urls)),
+    # Router URLs
+    path('', include(router.urls)),
     
     # DRF browsable API login
     path('api-auth/', include('rest_framework.urls')),
