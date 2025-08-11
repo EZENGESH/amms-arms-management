@@ -1,4 +1,4 @@
-import api from './apiClient';
+import inventoryApi from './apiClient';
 
 /**
  * Inventory Service - Handles all inventory-related API calls
@@ -97,7 +97,7 @@ export async function getInventory(options = {}) {
       sort_order: sortOrder
     });
     
-    const response = await api.get(`/api/inventory/arms/?${params}`);
+    const response = await inventoryApi.get(`/api/inventory/arms/?${params}`);
     return {
       data: response.data,
       success: true,
@@ -121,7 +121,7 @@ export async function getInventoryByType(type, options = {}) {
       limit: limit.toString()
     });
     
-    const response = await api.get(`/api/inventory/arms/by_type/?${params}`);
+    const response = await inventoryApi.get(`/api/inventory/arms/by_type/?${params}`);
     return {
       data: response.data,
       type: type,
@@ -191,7 +191,7 @@ export async function addFirearm(firearmData) {
       calibre: firearmData.calibre?.toString().trim()
     };
     
-    const response = await api.post('/api/inventory/arms/', sanitizedData);
+    const response = await inventoryApi.post('/api/inventory/arms/', sanitizedData);
     return {
       data: response.data,
       success: true,
@@ -234,7 +234,7 @@ export async function deleteFirearm(id) {
   try {
     validateId(id);
     
-    const response = await api.delete(`/api/inventory/arms/${encodeURIComponent(id)}/`);
+    const response = await inventoryApi.delete(`/api/inventory/arms/${encodeURIComponent(id)}/`);
     return {
       data: response.data,
       success: true,
@@ -250,8 +250,8 @@ export async function deleteFirearm(id) {
 export async function getFirearmById(id) {
   try {
     validateId(id);
-    
-    const response = await api.get(`/api/inventory/arms/${encodeURIComponent(id)}/`);
+
+    const response = await inventoryApi.get(`/api/inventory/arms/${encodeURIComponent(id)}/`);
     return {
       data: response.data,
       success: true,
@@ -303,7 +303,7 @@ export async function bulkUpdateFirearms(firearms) {
       }
     });
     
-    const response = await api.post('/api/inventory/arms/bulk-update/', { firearms });
+    const response = await inventoryApi.post('/api/inventory/arms/bulk-update/', { firearms });
     return {
       data: response.data,
       success: true,

@@ -70,8 +70,8 @@ const addRefreshTokenInterceptor = (apiInstance) => {
 };
 
 // Apply interceptors to both instances
-addTokenInterceptor(userApi);
-addRefreshTokenInterceptor(userApi);
+addTokenInterceptor(api);
+addRefreshTokenInterceptor(api);
 addTokenInterceptor(inventoryApi);
 addRefreshTokenInterceptor(inventoryApi);
 

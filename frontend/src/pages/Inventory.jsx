@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
 import { getInventory, searchInventory, getInventoryDashboard } from '../services/inventory';
 
+
 export default function Inventory() {
   const [firearms, setFirearms] = useState([]);
   const [loading, setLoading] = useState(true);
