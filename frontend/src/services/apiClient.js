@@ -1,47 +1,80 @@
 // src/services/apiClient.js
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8001';
+// Define base URLs for different microservices
+const USER_API_BASE_URL = 'http://localhost:8001'; // User registration service
+const INVENTORY_API_BASE_URL = 'http://localhost:8002'; // Inventory service
 
+// Create Axios instance for User service
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: USER_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+// Create Axios instance for Inventory service
+const inventoryApi = axios.create({
+  baseURL: INVENTORY_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
   },
-  (error) => Promise.reject(error)
-);
+});
 
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const newToken = await refreshToken();
-        localStorage.setItem('access_token', newToken.access);
-        originalRequest.headers.Authorization = `Bearer ${newToken.access}`;
-        return api(originalRequest);
-      } catch (err) {
-        console.error('Refresh token failed:', err);
-        window.location.href = '/login';
+// Function to refresh token (assumed to be implemented elsewhere)
+async function refreshToken() {
+  // Implement your token refresh logic here
+  // This is a placeholder, replace with your actual implementation
+  console.warn('refreshToken() function needs to be implemented');
+  return Promise.resolve({ access: 'new_access_token' });
+}
+
+// Add interceptor for adding token to request
+const addTokenInterceptor = (apiInstance) => {
+  apiInstance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
-    }
-    
-    return Promise.reject(error);
-  }
-);
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+};
 
-export default api;
+// Add interceptor for handling token refresh
+const addRefreshTokenInterceptor = (apiInstance) => {
+  apiInstance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        try {
+          const newToken = await refreshToken();
+          localStorage.setItem('access_token', newToken.access);
+          originalRequest.headers.Authorization = `Bearer ${newToken.access}`;
+          return apiInstance(originalRequest); // Use the correct instance
+        } catch (err) {
+          console.error('Refresh token failed:', err);
+          window.location.href = '/login';
+        }
+      }
+
+      return Promise.reject(error);
+    }
+  );
+};
+
+// Apply interceptors to both instances
+addTokenInterceptor(userApi);
+addRefreshTokenInterceptor(userApi);
+addTokenInterceptor(inventoryApi);
+addRefreshTokenInterceptor(inventoryApi);
+
+// Export the instances
+export { api, inventoryApi };
+export default api; // Default export remains userApi for backward compatibility
