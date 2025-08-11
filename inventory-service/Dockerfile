@@ -10,7 +10,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc python3-dev default-libmysqlclient-dev pkg-config
 
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir --timeout=1000 --retries=10 -r requirements.txt
 
 COPY . .
 

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Requisition Service (Django Application)
   requisition-service:
@@ -44,7 +42,7 @@ services:
     image: redis:7.2-alpine  # Pinned version
     container_name: requisition_redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
       - backend-network
     healthcheck:
@@ -95,7 +93,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: '%'
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ./mysql-config:/etc/mysql/conf.d
