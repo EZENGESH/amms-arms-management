@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # User Service
   user-service:
@@ -12,13 +10,10 @@ services:
     networks:
       - backend-network
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     command: >
-      sh -c "until mysqladmin ping -h db -u user_db -psecurepassword --silent; do
-        echo 'Waiting for database...'; 
-        sleep 2; 
-      done &&
+      sh -c "until nc -z db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
     restart: unless-stopped
 
@@ -26,20 +21,36 @@ services:
     image: mysql:8.0
     ports:
       - "3307:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: user_service_db
-      MYSQL_USER: user_db
-      MYSQL_PASSWORD: securepassword
+    env_file:
+      - ./user-service/db.env
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 10s
       retries: 10
+    restart: unless-stopped
+
+  user-celery:
+    build:
+      context: ./user-service
+    command: celery -A user_service worker --loglevel=info --concurrency=4
+    depends_on:
+      - redis
+      - db
+    environment:
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3306
+      DJANGO_DB_NAME: user_service_db
+      DJANGO_DB_USER: user_db
+      DJANGO_DB_PASSWORD: securepassword
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    networks:
+      - backend-network
     restart: unless-stopped
 
   # Inventory Service
@@ -48,23 +59,15 @@ services:
       context: ./inventory-service
     ports:
       - "8002:8000"
-    environment:
-      DB_HOST: inventory-db
-      DB_PORT: "3306"
-      DB_NAME: inventory_db
-      DB_USER: inventory_user
-      DB_PASSWORD: securepassword
+    env_file:
+      - ./inventory-service/.env
     networks:
       - backend-network
     depends_on:
-      inventory-db:
-        condition: service_healthy
+      - inventory-db
     command: >
-      sh -c "while ! mysqladmin ping -h inventory-db -u inventory_user -psecurepassword --silent; do
-        echo 'Waiting for database connection...';
-        sleep 2;
-      done &&
-      python manage.py migrate &&
+      sh -c "until nc -z inventory-db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
     restart: unless-stopped
 
@@ -72,18 +75,14 @@ services:
     image: mysql:8.0
     ports:
       - "3308:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: inventory_db
-      MYSQL_USER: inventory_user
-      MYSQL_PASSWORD: securepassword
+    env_file:
+      - ./inventory-service/db.env
     volumes:
       - inventory-mysql-data:/var/lib/mysql
-      - ./inventory-service/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 10s
       retries: 10
