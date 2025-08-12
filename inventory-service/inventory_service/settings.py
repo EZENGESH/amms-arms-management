@@ -80,17 +80,15 @@ WSGI_APPLICATION = 'inventory_service.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DJANGO_DB_NAME'),
-        'USER': config('DJANGO_DB_USER'),
-        'PASSWORD': config('DJANGO_DB_PASSWORD'),
-        'HOST': 'inventory-db',  # Use the service name from docker-compose
-        'PORT': '3306',
+        'NAME': os.getenv('DB_NAME', 'inventory_db'),
+        'USER': os.getenv('DB_USER', 'inventory_user'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'securepassword'),
+        'HOST': os.getenv('DB_HOST', 'inventory-db'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
-            'connect_timeout': 5,
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-        'CONN_MAX_AGE': 60,
+            'connect_timeout': 30,
+        }
     }
 }
 

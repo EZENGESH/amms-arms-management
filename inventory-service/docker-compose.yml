@@ -46,12 +46,12 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_DB_HOST: db
-      DJANGO_DB_PORT: 3306
-      DJANGO_DB_PASSWORD: ${DJANGO_DB_PASSWORD}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: ${DJANGO_DEBUG}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+    - DB_HOST=inventory-db  # Must match service name
+    - DB_PORT=3306
+    - DB_NAME=inventory_db
+    - DB_USER=inventory_user
+    - DB_PASSWORD=securepassword
+    - DJANGO_DB_HOST=inventory-db
 
   # Redis Service (Message Broker for Celery)
   redis:
