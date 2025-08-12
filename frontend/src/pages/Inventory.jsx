@@ -50,6 +50,7 @@ export default function Inventory() {
     }
   };
 
+
   if (loading) {
     return (
       <AdminLayout>

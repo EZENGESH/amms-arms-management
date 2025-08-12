@@ -21,6 +21,13 @@ const inventoryApi = axios.create({
   },
 });
 
+const logfirearmapi = axios.create({
+  baseURL: 'http://localhost:8002',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Function to refresh token (assumed to be implemented elsewhere)
 async function refreshToken() {
   // Implement your token refresh logic here
@@ -74,7 +81,9 @@ addTokenInterceptor(api);
 addRefreshTokenInterceptor(api);
 addTokenInterceptor(inventoryApi);
 addRefreshTokenInterceptor(inventoryApi);
+addTokenInterceptor(logfirearmapi);
+addRefreshTokenInterceptor(logfirearmapi);
 
 // Export the instances
-export { api, inventoryApi };
+export { api, inventoryApi, logfirearmapi };
 export default api; // Default export remains userApi for backward compatibility

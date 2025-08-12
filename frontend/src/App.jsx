@@ -9,6 +9,7 @@ import Reports from './pages/Reports';
 import RegisterForm from './pages/RegisterForm';
 import RequisitionList from './pages/RequisitionList';
 import NotFound from './pages/NotFound';
+import LogFirearm from './pages/LogFirearm';
 
 function App() {
   return (
@@ -47,6 +48,10 @@ function App() {
         element={<RequisitionList />} /> {/* 👈 list route */}
         {/* 👇 Catch-all route */}
         <Route path="*" element={<NotFound />} />
+       
+
+// Inside your Routes component
+<Route path="/lo" element={<LogFirearm />} />
     </Routes>
   );
 }

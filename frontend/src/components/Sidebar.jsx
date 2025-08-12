@@ -29,6 +29,15 @@ export default function Sidebar() {
                         Requisitions
                     </a>
                 </li>
+                <li>
+                    <a href="/inventory/new">
+                      <div className="flex justify-between mb-4">
+                        <h1 className="text-2xl font-bold">Firearms Inventory</h1>
+                      
+                </div>
+                   </a>
+                </li>
+                
             </ul>
         </aside>
     );
