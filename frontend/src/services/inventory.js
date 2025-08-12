@@ -1,331 +1,275 @@
-import inventoryApi from './apiClient';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../layouts/AdminLayout';
+import { inventoryApi } from '../services/apiClient';
 
-/**
- * Inventory Service - Handles all inventory-related API calls
- * Provides error handling, validation, and proper URL encoding
- */
+const FIREARM_TYPES = [
+  { value: 'RIFLE', label: 'Rifle' },
+  { value: 'PISTOL', label: 'Pistol' },
+  { value: 'SHOTGUN', label: 'Shotgun' },
+  { value: 'MACHINE_GUN', label: 'Machine Gun' },
+  { value: 'SUBMACHINE_GUN', label: 'Submachine Gun' }
+];
 
-// Service health check
-export async function checkInventoryServiceHealth() {
-  try {
-    const response = await api.get('/health/');
-    return {
-      isHealthy: response.status === 200,
-      data: response.data,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    console.warn('Inventory service health check failed:', error.message);
-    // Fallback health check
+export default function LogFirearm() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    serial_number: '',
+    model: '',
+    calibre: '',
+    type: '',
+    manufacturer: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear validation error when field is edited
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: null
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.serial_number.trim()) {
+      errors.serial_number = 'Serial number is required';
+    }
+    
+    if (!formData.model.trim()) {
+      errors.model = 'Model is required';
+    }
+    
+    if (!formData.type) {
+      errors.type = 'Firearm type is required';
+    }
+    
+    if (!formData.manufacturer.trim()) {
+      errors.manufacturer = 'Manufacturer is required';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      await api.get('/api/inventory/');
-      return { isHealthy: true, fallback: true, timestamp: new Date().toISOString() };
-    } catch (fallbackError) {
-      return { 
-        isHealthy: false, 
-        error: fallbackError.message, 
-        timestamp: new Date().toISOString() 
-      };
-    }
-  }
-}
-
-// Enhanced error handler
-function handleApiError(error, operation) {
-  console.error(`Error ${operation}:`, error);
-  
-  if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
-    throw new Error(`Cannot connect to inventory service. Please ensure the service is running on the correct port.`);
-  }
-  
-  if (error.response?.status === 404) {
-    throw new Error(`${operation} endpoint not found. Please check the API configuration.`);
-  }
-  
-  if (error.response?.status === 400) {
-    const message = error.response.data?.message || error.response.data?.error || 'Invalid request';
-    throw new Error(`Bad request: ${message}`);
-  }
-  
-  if (error.response?.status === 401) {
-    throw new Error('Unauthorized access. Please check your authentication.');
-  }
-  
-  if (error.response?.status === 403) {
-    throw new Error('Access forbidden. You do not have permission to perform this action.');
-  }
-  
-  if (error.response?.status === 500) {
-    throw new Error('Internal server error. Please try again later or contact support.');
-  }
-  
-  // Generic error
-  const statusCode = error.response?.status || 'Network Error';
-  const message = error.response?.data?.message || error.message || 'Unknown error occurred';
-  throw new Error(`API Error (${statusCode}): ${message}`);
-}
-
-// Validation helpers
-function validateFirearmData(firearmData) {
-  if (!firearmData || typeof firearmData !== 'object') {
-    throw new Error('Invalid firearm data provided');
-  }
-  
-  const requiredFields = ['serial_number', 'model', 'type', 'manufacturer'];
-  const missingFields = requiredFields.filter(field => !firearmData[field]);
-  
-  if (missingFields.length > 0) {
-    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-  }
-}
-
-function validateId(id) {
-  if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
-    throw new Error('Valid ID is required');
-  }
-}
-
-// Core inventory functions
-export async function getInventory(options = {}) {
-  try {
-    const { page = 1, limit = 50, sortBy = 'serial_number', sortOrder = 'asc' } = options;
-    
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      sort_by: sortBy,
-      sort_order: sortOrder
-    });
-    
-    const response = await inventoryApi.get(`/api/inventory/arms/?${params}`);
-    return {
-      data: response.data,
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'fetching inventory');
-  }
-}
-
-export async function getInventoryByType(type, options = {}) {
-  try {
-    if (!type || typeof type !== 'string') {
-      throw new Error('Valid firearm type is required');
-    }
-    
-    const { page = 1, limit = 50 } = options;
-    const params = new URLSearchParams({
-      type: encodeURIComponent(type.trim()),
-      page: page.toString(),
-      limit: limit.toString()
-    });
-    
-    const response = await inventoryApi.get(`/api/inventory/arms/by_type/?${params}`);
-    return {
-      data: response.data,
-      type: type,
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'fetching inventory by type');
-  }
-}
-
-export async function getInventoryDashboard() {
-  try {
-    const response = await api.get('/api/inventory/arms/dashboard/');
-    return {
-      data: response.data,
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'fetching inventory dashboard');
-  }
-}
-
-export async function searchInventory(query, options = {}) {
-  try {
-    if (!query || typeof query !== 'string' || query.trim().length === 0) {
-      throw new Error('Search query is required and cannot be empty');
-    }
-    
-    const { page = 1, limit = 50, searchFields = [] } = options;
-    const params = new URLSearchParams({
-      q: encodeURIComponent(query.trim()),
-      page: page.toString(),
-      limit: limit.toString()
-    });
-    
-    // Add specific search fields if provided
-    if (searchFields.length > 0) {
-      params.append('fields', searchFields.join(','));
-    }
-    
-    const response = await api.get(`/api/inventory/arms/search/?${params}`);
-    return {
-      data: response.data,
-      query: query.trim(),
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'searching inventory');
-  }
-}
-
-// CRUD operations with enhanced validation
-export async function addFirearm(firearmData) {
-  try {
-    validateFirearmData(firearmData);
-    
-    // Sanitize data
-    const sanitizedData = {
-      ...firearmData,
-      serial_number: firearmData.serial_number?.toString().trim(),
-      model: firearmData.model?.toString().trim(),
-      manufacturer: firearmData.manufacturer?.toString().trim(),
-      type: firearmData.type?.toString().trim(),
-      calibre: firearmData.calibre?.toString().trim()
-    };
-    
-    const response = await inventoryApi.post('/api/inventory/arms/', sanitizedData);
-    return {
-      data: response.data,
-      success: true,
-      message: 'Firearm added successfully',
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'adding firearm');
-  }
-}
-
-export async function updateFirearm(id, firearmData) {
-  try {
-    validateId(id);
-    validateFirearmData(firearmData);
-    
-    // Sanitize data
-    const sanitizedData = {
-      ...firearmData,
-      serial_number: firearmData.serial_number?.toString().trim(),
-      model: firearmData.model?.toString().trim(),
-      manufacturer: firearmData.manufacturer?.toString().trim(),
-      type: firearmData.type?.toString().trim(),
-      calibre: firearmData.calibre?.toString().trim()
-    };
-    
-    const response = await api.put(`/api/inventory/arms/${encodeURIComponent(id)}/`, sanitizedData);
-    return {
-      data: response.data,
-      success: true,
-      message: 'Firearm updated successfully',
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'updating firearm');
-  }
-}
-
-export async function deleteFirearm(id) {
-  try {
-    validateId(id);
-    
-    const response = await inventoryApi.delete(`/api/inventory/arms/${encodeURIComponent(id)}/`);
-    return {
-      data: response.data,
-      success: true,
-      message: 'Firearm deleted successfully',
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'deleting firearm');
-  }
-}
-
-// Additional utility functions
-export async function getFirearmById(id) {
-  try {
-    validateId(id);
-
-    const response = await inventoryApi.get(`/api/inventory/arms/${encodeURIComponent(id)}/`);
-    return {
-      data: response.data,
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'fetching firearm details');
-  }
-}
-
-export async function getFirearmTypes() {
-  try {
-    const response = await api.get('/api/inventory/arms/types/');
-    return {
-      data: response.data,
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'fetching firearm types');
-  }
-}
-
-export async function getManufacturers() {
-  try {
-    const response = await api.get('/api/inventory/arms/manufacturers/');
-    return {
-      data: response.data,
-      success: true,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'fetching manufacturers');
-  }
-}
-
-export async function bulkUpdateFirearms(firearms) {
-  try {
-    if (!Array.isArray(firearms) || firearms.length === 0) {
-      throw new Error('Valid array of firearms is required');
-    }
-    
-    // Validate each firearm
-    firearms.forEach((firearm, index) => {
-      try {
-        validateFirearmData(firearm);
-      } catch (error) {
-        throw new Error(`Invalid firearm data at index ${index}: ${error.message}`);
+      await inventoryApi.post('/api/arms/', formData);
+      setSuccess(true);
+      setFormData({
+        serial_number: '',
+        model: '',
+        calibre: '',
+        type: '',
+        manufacturer: ''
+      });
+      setTimeout(() => {
+        setSuccess(false);
+      }, 5000);
+    } catch (err) {
+      console.error('Error logging firearm:', err);
+      
+      // Handle different types of errors
+      if (err.response?.status === 400 && err.response.data) {
+        // Handle validation errors from backend
+        const backendErrors = {};
+        Object.entries(err.response.data).forEach(([key, value]) => {
+          backendErrors[key] = Array.isArray(value) ? value[0] : value;
+        });
+        setValidationErrors(backendErrors);
+        setError('Please correct the errors in the form.');
+      } else if (err.response?.status === 404) {
+        setError('The API endpoint was not found. Please check your configuration.');
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('Network error. Please check if the inventory service is running.');
+      } else {
+        setError(err.response?.data?.detail || 
+          'Failed to log firearm. Please check your inputs and try again.');
       }
-    });
-    
-    const response = await inventoryApi.post('/api/inventory/arms/bulk-update/', { firearms });
-    return {
-      data: response.data,
-      success: true,
-      message: `${firearms.length} firearms updated successfully`,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    handleApiError(error, 'bulk updating firearms');
-  }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goBack = () => {
+    navigate('/inventory');
+  };
+
+  return (
+    <AdminLayout>
+      <div className="max-w-3xl mx-auto py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Log New Firearm</h1>
+          <button
+            onClick={goBack}
+            className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Back to Inventory
+          </button>
+        </div>
+        
+        {success && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            Firearm logged successfully!
+          </div>
+        )}
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="serial_number">
+              Serial Number *
+            </label>
+            <input
+              className={`shadow appearance-none border ${validationErrors.serial_number ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+              id="serial_number"
+              name="serial_number"
+              type="text"
+              placeholder="Enter serial number"
+              value={formData.serial_number}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {validationErrors.serial_number && (
+              <p className="text-red-500 text-xs italic">{validationErrors.serial_number}</p>
+            )}
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="model">
+              Model *
+            </label>
+            <input
+              className={`shadow appearance-none border ${validationErrors.model ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+              id="model"
+              name="model"
+              type="text"
+              placeholder="Enter model"
+              value={formData.model}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {validationErrors.model && (
+              <p className="text-red-500 text-xs italic">{validationErrors.model}</p>
+            )}
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="type">
+              Type *
+            </label>
+            <select
+              className={`shadow appearance-none border ${validationErrors.type ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+              id="type"
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              disabled={loading}
+            >
+              <option value="">Select a type</option>
+              {FIREARM_TYPES.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+            {validationErrors.type && (
+              <p className="text-red-500 text-xs italic">{validationErrors.type}</p>
+            )}
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="manufacturer">
+              Manufacturer *
+            </label>
+            <input
+              className={`shadow appearance-none border ${validationErrors.manufacturer ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+              id="manufacturer"
+              name="manufacturer"
+              type="text"
+              placeholder="Enter manufacturer"
+              value={formData.manufacturer}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {validationErrors.manufacturer && (
+              <p className="text-red-500 text-xs italic">{validationErrors.manufacturer}</p>
+            )}
+          </div>
+          
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="calibre">
+              Calibre
+            </label>
+            <input
+              className={`shadow appearance-none border ${validationErrors.calibre ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+              id="calibre"
+              name="calibre"
+              type="text"
+              placeholder="Enter calibre"
+              value={formData.calibre}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {validationErrors.calibre && (
+              <p className="text-red-500 text-xs italic">{validationErrors.calibre}</p>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <button
+              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : 'Log Firearm'}
+            </button>
+            <button
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="button"
+              onClick={() => {
+                setFormData({
+                  serial_number: '',
+                  model: '',
+                  calibre: '',
+                  type: '',
+                  manufacturer: ''
+                });
+                setValidationErrors({});
+              }}
+              disabled={loading}
+            >
+              Clear Form
+            </button>
+          </div>
+        </form>
+        
+        <p className="text-sm text-gray-600 mb-4">* Required fields</p>
+      </div>
+    </AdminLayout>
+  );
 }
-
-// Export utilities for external use
-export const inventoryUtils = {
-  validateFirearmData,
-  validateId,
-  handleApiError
-};
-
-// Service configuration
-export const INVENTORY_CONFIG = {
-  DEFAULT_PAGE_SIZE: 50,
-  MAX_PAGE_SIZE: 200,
-  SUPPORTED_SORT_FIELDS: ['serial_number', 'model', 'type', 'manufacturer', 'calibre', 'created_at'],
-  SUPPORTED_SEARCH_FIELDS: ['serial_number', 'model', 'type', 'manufacturer', 'calibre']
-};
