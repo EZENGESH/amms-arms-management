@@ -83,14 +83,16 @@ DATABASES = {
         'NAME': config('DJANGO_DB_NAME'),
         'USER': config('DJANGO_DB_USER'),
         'PASSWORD': config('DJANGO_DB_PASSWORD'),
-        'HOST': config('DJANGO_DB_HOST', default='localhost'),
-        'PORT': config('DJANGO_DB_PORT', default='3306'),
+        'HOST': 'inventory-db',  # Use the service name from docker-compose
+        'PORT': '3306',
         'OPTIONS': {
             'charset': 'utf8mb4',
+            'connect_timeout': 5,
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
+        'CONN_MAX_AGE': 60,
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
