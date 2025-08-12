@@ -24,11 +24,7 @@ function App() {
       {/* Private routes */}
       <Route 
         path="/dashboard" 
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } 
+        element={<Dashboard />}
         aria-label="Dashboard Page"
       />
       <Route 
@@ -45,13 +41,11 @@ function App() {
       <Route path="/requisition/new"
         element={<RequisitionForm />} /> {/* 👈 form route */}
       <Route path="/requisitions"
-        element={<RequisitionList />} /> {/* 👈 list route */}
-        {/* 👇 Catch-all route */}
-        <Route path="*" element={<NotFound />} />
-       
+        element={<RequisitionList />} />
+      <Route path="/logfirearm" element={<LogFirearm />} />
+      <Route path="*" element={<NotFound />} />
 
-// Inside your Routes component
-<Route path="/lo" element={<LogFirearm />} />
+
     </Routes>
   );
 }

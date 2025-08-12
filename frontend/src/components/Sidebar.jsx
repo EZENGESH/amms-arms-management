@@ -30,7 +30,7 @@ export default function Sidebar() {
                     </a>
                 </li>
                 <li>
-                    <a href="/inventory/new">
+                    <a href="/logfirearm">
                       <div className="flex justify-between mb-4">
                         <h1 className="text-2xl font-bold">Firearms Inventory</h1>
                       
