@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../layouts/AdminLayout';
 import { addFirearm, FIREARM_TYPES, checkInventoryServiceHealth } from '../services/inventory';
-import { telemetryService } from '../services/telemetry';
-
 export default function LogFirearm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
