@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../layouts/AdminLayout';
-import { inventoryApi } from '../services/apiClient';
-
-const FIREARM_TYPES = [
-  { value: 'RIFLE', label: 'Rifle' },
-  { value: 'PISTOL', label: 'Pistol' },
-  { value: 'SHOTGUN', label: 'Shotgun' },
-  { value: 'MACHINE_GUN', label: 'Machine Gun' },
-  { value: 'SUBMACHINE_GUN', label: 'Submachine Gun' }
-];
+import { addFirearm, FIREARM_TYPES } from '../services/inventory';
 
 export default function LogFirearm() {
   const navigate = useNavigate();
@@ -75,7 +67,7 @@ export default function LogFirearm() {
     setError(null);
     
     try {
-      await inventoryApi.post('/api/arms/', formData);
+      await addFirearm(formData);
       setSuccess(true);
       setFormData({
         serial_number: '',
@@ -104,8 +96,7 @@ export default function LogFirearm() {
       } else if (err.code === 'ERR_NETWORK') {
         setError('Network error. Please check if the inventory service is running.');
       } else {
-        setError(err.response?.data?.detail || 
-          'Failed to log firearm. Please check your inputs and try again.');
+        setError(err.message || 'Failed to log firearm. Please check your inputs and try again.');
       }
     } finally {
       setLoading(false);
