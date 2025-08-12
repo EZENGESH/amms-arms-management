@@ -53,40 +53,55 @@ services:
       - backend-network
     restart: unless-stopped
 
-  # Inventory Service
-  inventory-service:
-    build:
-      context: ./inventory-service
-    ports:
-      - "8002:8000"
-    env_file:
-      - ./inventory-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      - inventory-db
-    command: >
-      sh -c "until nc -z inventory-db 3306; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
-    restart: unless-stopped
+  # Inventory Serviceinventory-service:
+  build:
+    context: ./inventory-service
+  ports:
+    - "8002:8000"
+  env_file:
+    - ./inventory-service/.env
+  environment:
+    - DB_HOST=inventory-db
+    - DB_PORT=3306
+    - DB_NAME=inventory_db
+    - DB_USER=inventory_user
+    - DB_PASSWORD=securepassword
+  networks:
+    - backend-network
+  depends_on:
+    inventory-db:
+      condition: service_healthy
+  command: >
+    sh -c "while ! mysqladmin ping -h inventory-db -u inventory_user -psecurepassword --silent; do
+      echo 'Waiting for database connection...';
+      sleep 2;
+    done &&
+    python manage.py migrate &&
+    gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+  restart: unless-stopped
 
-  inventory-db:
-    image: mysql:8.0
-    ports:
-      - "3308:3306"
-    env_file:
-      - ./inventory-service/db.env
-    volumes:
-      - inventory-mysql-data:/var/lib/mysql
-    networks:
-      - backend-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    restart: unless-stopped
+inventory-db:
+  image: mysql:8.0
+  ports:
+    - "3308:3306"
+  env_file:
+    - ./inventory-service/db.env
+  environment:
+    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    MYSQL_DATABASE: ${MYSQL_DATABASE}
+    MYSQL_USER: ${MYSQL_USER}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  volumes:
+    - inventory-mysql-data:/var/lib/mysql
+    - ./inventory-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+  networks:
+    - backend-network
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+    interval: 5s
+    timeout: 10s
+    retries: 10
+  restart: unless-stopped
 
   # Requisition Service
   requisition-service:

@@ -1,84 +1,99 @@
-version: '3.8'
-
 services:
-  inventory-service:
-    build:
-      context: ./inventory-service
-    ports:
-      - "8002:8000"
-    env_file:
-      - .env
-    environment:
-      # Azure Application Insights for monitoring
-      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
-      # Azure KeyVault integration (for production)
-      AZURE_KEYVAULT_ENDPOINT: ${AZURE_KEYVAULT_ENDPOINT}
-      # Database connection string - more secure approach for Azure
-      DJANGO_DB_CONNECTION_STRING: "mysql://${DJANGO_DB_USER}:${DJANGO_DB_PASSWORD}@inventory-db:3306/${DJANGO_DB_NAME}"
-    networks:
-      - backend-network
-    depends_on:
-      inventory-db:
-        condition: service_healthy
-    command: >
-      sh -c "until nc -z inventory-db 3306; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 
-      --access-logfile - 
-      --error-logfile - 
-      --logger-class=opencensus.ext.django.traces.AppEngineLogger
-      inventory_service.wsgi:application"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  inventory-db:
+  # MySQL Database for Inventory Service
+  db:
     image: mysql:8.0
-    ports:
-      - "3308:3306"
+    container_name: inventory_db
+    restart: always
     env_file:
-      - .env
+      - db.env
     environment:
       MYSQL_DATABASE: ${DJANGO_DB_NAME}
       MYSQL_USER: ${DJANGO_DB_USER}
       MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # Performance optimizations for Azure VMs
-      MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE:-134217728}
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
     volumes:
-      - inventory-mysql-data:/var/lib/mysql
-      - ./inventory-service/db-init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./inventory-service/mysql-config:/etc/mysql/conf.d
+      - db_data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Inventory Service (Django Application)
+  inventory-service:
+    build:
+      context: .
+    command: >
+      sh -c "while ! nc -z db 3306; do sleep 1; done &&
+      python manage.py migrate &&
+      gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
+    volumes:
+      - .:/app               
+      - static_volume:/app/staticfiles
+      - ./logs:/app/logs
+    ports:
+      - "8002:8000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - backend-network
+    env_file:
+      - .env
+    environment:
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3306
+      DJANGO_DB_PASSWORD: ${DJANGO_DB_PASSWORD}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+
+  # Redis Service (Message Broker for Celery)
+  redis:
+    image: redis:alpine
+    container_name: inventory_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Example: bind mount for Redis config
+    volumes:
+      - ./redis-data:/data
+
+  # Celery Worker Service
+  celery:
+    build:
+      context: .
+    container_name: inventory_celery
+    command: celery -A inventory_service worker --loglevel=info
+    depends_on:
+      - redis
+      - db
+    networks:
+      - backend-network
+    env_file:
+      - .env
+    environment:
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3306
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - ./logs:/app/logs
 
 volumes:
-  inventory-mysql-data:
-    # For Azure, use Azure File Shares or Managed Disks in production
-    # driver: azure_file
-    # driver_opts:
-    #   share_name: inventory-mysql-data
-    #   storage_account_name: ${STORAGE_ACCOUNT_NAME}
+  db_data:
+  static_volume:
 
 networks:
   backend-network:
