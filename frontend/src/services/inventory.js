@@ -1,5 +1,5 @@
 import { inventoryApi } from './apiClient';
-import { telemetryService } from './telemetry'; // Assuming you have this for Azure Application Insights
+import { telemetryService } from './telemetryservice'; // Assuming you have this for Azure Application Insights
 
 /**
  * Inventory Service - Handles all inventory-related API calls
