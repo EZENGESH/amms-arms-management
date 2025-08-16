@@ -16,44 +16,35 @@ class ArmViewSet(ModelViewSet):
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
         try:
-            # Basic counts
-            total_firearms = Arm.objects.count()
+            queryset = self.get_queryset()
             
-            # Type statistics - handle empty database case
-            type_stats = list(
-                Arm.objects.values('type')
-                .annotate(count=Count('id'))
-                .order_by('-count')
-            ) or [{'type': 'none', 'count': 0}]
-            
-            # Manufacturer statistics
-            manufacturer_stats = list(
-                Arm.objects.values('manufacturer')
-                .annotate(count=Count('id'))
-                .order_by('-count')[:10]
-            ) or [{'manufacturer': 'none', 'count': 0}]
-            
-            # Calibre statistics - handle null values
-            calibre_stats = list(
-                Arm.objects.exclude(calibre__isnull=True)
-                .values('calibre')
-                .annotate(count=Count('id'))
-                .order_by('-count')
-            ) or [{'calibre': 'none', 'count': 0}]
-
             data = {
                 'summary': {
-                    'total_firearms': total_firearms,
+                    'total_firearms': queryset.count(),
                 },
-                'type_statistics': type_stats,
-                'manufacturer_statistics': manufacturer_stats,
-                'calibre_statistics': calibre_stats,
+                'type_statistics': list(
+                    queryset.values('type')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')
+                ),
+                'manufacturer_statistics': list(
+                    queryset.values('manufacturer')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:10]
+                ),
+                'calibre_statistics': list(
+                    queryset.exclude(calibre__isnull=True)
+                    .values('calibre')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')
+                ),
             }
             return Response(data)
-            
         except Exception as e:
-            logger.error(f"Dashboard error: {str(e)}", exc_info=True)
-            return Response(
-                {'error': 'Failed to generate dashboard data', 'details': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f"Dashboard error: {str(e)}")
+            return Response({
+                'summary': {'total_firearms': 0},
+                'type_statistics': [],
+                'manufacturer_statistics': [],
+                'calibre_statistics': []
+            }, status=status.HTTP_200_OK)
