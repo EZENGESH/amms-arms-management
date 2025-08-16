@@ -31,10 +31,10 @@ services:
       gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
     environment:
       - DB_HOST=db
-      - DB_PORT=3310
-      - DB_NAME=${DJANGO_DB_NAME}
-      - DB_USER=${DJANGO_DB_USER}
-      - DB_PASSWORD=${DJANGO_DB_PASSWORD}
+      - DB_PORT=3310  
+      - DB_NAME=inventory_db
+      - DB_USER=inventory_user
+      - DB_PASSWORD=securepassword
     depends_on:
       db:
         condition: service_healthy
@@ -59,5 +59,9 @@ services:
       context: .
     environment:
       DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3310
+      DJANGO_DB_NAME: inventory_db
+      DJANGO_DB_USER: inventory_user
+      DJANGO_DB_PASSWORD: securepassword
     networks:
       - backend-network
