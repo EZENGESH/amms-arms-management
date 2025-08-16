@@ -25,15 +25,17 @@ services:
       retries: 5
 
   inventory-service:
+    ports:
+      - "8002:8000"
     build:
       context: .
     command: >
-      sh -c "while ! nc -z db 3310; do sleep 2; done &&
+      sh -c "while ! nc -z db 3306; do sleep 2; done &&
       python manage.py migrate &&
       gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
     environment:
       - DB_HOST=db
-      - DB_PORT=3310
+      - DB_PORT=3306
       - DB_NAME=${DB_NAME:-inventory_db}
       - DB_USER=${DB_USER:-inventory_user}
       - DB_PASSWORD=${DB_PASSWORD:-securepassword}
