@@ -68,7 +68,7 @@ DATABASES = {
         'USER': os.getenv('DB_USER', 'inventory_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'securepassword'),
         'HOST': 'db',  # Hardcoded to match docker service name
-        'PORT': os.getenv('DB_PORT', '3310'),  # Must match docker-compose port mapping
+        'PORT': os.getenv('DB_PORT', '3306'),  # Must match docker-compose port mapping
         'OPTIONS': {
             'charset': 'utf8mb4',
             'connect_timeout': 30,
