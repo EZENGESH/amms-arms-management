@@ -42,7 +42,8 @@ function handleApiError(error, operation) {
 // Service health check
 export async function checkInventoryServiceHealth() {
   try {
-    const response = await inventoryApi.get('/api/');
+    // Use a valid health or list endpoint, not a malformed one
+    const response = await inventoryApi.get('/api/arms/');
     return {
       isHealthy: true,
       timestamp: new Date().toISOString()
@@ -163,32 +164,21 @@ export const INVENTORY_CONFIG = {
   DEFAULT_PAGE_SIZE: 50,
   MAX_PAGE_SIZE: 200,
   API_ENDPOINTS: {
-    // Base CRUD endpoints (matches your ViewSet)
-    BASE: 'arms/',  // Note: No leading /api/ since it's often prefixed by axios baseURL
-
-    // Custom endpoints from your service methods
+    BASE: 'arms/',
     DASHBOARD: 'arms/dashboard/',
     SEARCH: 'arms/search/',
     BY_TYPE: 'arms/by_type/',
-
-    // Health check endpoint (consistent with your checkInventoryServiceHealth())
     HEALTH: 'arms/health/',
-
-    // Individual item endpoint pattern (for GET/PUT/DELETE)
-    DETAIL: 'arms/:id/'  // :id will be replaced with actual ID
+    DETAIL: 'arms/:id/'
   },
-
-  // Default query parameters (matches your service methods)
   DEFAULT_PARAMS: {
     page: 1,
     limit: 50,
     sort_by: 'serial_number',
     sort_order: 'asc',
-    q: '',          // For search
-    type: ''        // For type filtering
+    q: '',
+    type: ''
   },
-
-  // Error messages that match your handleApiError implementation
   ERROR_MESSAGES: {
     NETWORK: 'Cannot connect to inventory service. Please ensure the service is running.',
     NOT_FOUND: 'The requested firearm was not found.',
@@ -196,8 +186,6 @@ export const INVENTORY_CONFIG = {
     VALIDATION: 'Invalid request data.',
     SERVER: 'Internal server error. Please try again later.'
   },
-
-  // Constants that match your FIREARM_TYPES
   FIREARM_TYPES: [
     'RIFLE',
     'PISTOL',
@@ -206,6 +194,8 @@ export const INVENTORY_CONFIG = {
     'SUBMACHINE_GUN'
   ]
 };
+
+// Add the missing getInventory export
 export async function getInventory(options = {}) {
   try {
     const { page = 1, limit = 50 } = options;
