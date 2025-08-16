@@ -43,7 +43,7 @@ function handleApiError(error, operation) {
 export async function checkInventoryServiceHealth() {
   try {
     // Use a valid health or list endpoint, not a malformed one
-    const response = await inventoryApi.get('/api/arms/');
+    const response = await inventoryApi.get('/arms/');
     return {
       isHealthy: true,
       timestamp: new Date().toISOString()
