@@ -1,4 +1,4 @@
-from django.contrib import admin  # <-- Add this import
+from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ArmViewSet
