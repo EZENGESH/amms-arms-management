@@ -1,4 +1,3 @@
-// src/services/inventory.js
 import { inventoryApi } from './apiClient';
 
 const DEFAULT_PAGINATION = {
@@ -26,14 +25,27 @@ export async function checkInventoryServiceHealth() {
 export async function getInventory(options = {}) {
   const params = { ...DEFAULT_PAGINATION, ...options };
   const response = await inventoryApi.get('/arms', { params });
-  return response.data;
+  // Always return an array for frontend safety
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (Array.isArray(response.data?.results)) {
+    return response.data.results;
+  }
+  return [];
 }
 
 export async function searchInventory(query, options = {}) {
   if (!query?.trim()) return getInventory(options);
   const params = { q: query.trim(), ...DEFAULT_PAGINATION, ...options };
   const response = await inventoryApi.get('/arms/search', { params });
-  return response.data;
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (Array.isArray(response.data?.results)) {
+    return response.data.results;
+  }
+  return [];
 }
 
 export async function getInventoryDashboard() {
