@@ -11,6 +11,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8001/api/user/register', // Proxy API requests to the backend
+        target: 'http://localhost:8009/api/', // Updated to match the inventory service base URL
         changeOrigin: true,
         secure: false,
       },
