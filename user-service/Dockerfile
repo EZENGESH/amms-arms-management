@@ -7,12 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies with retry logic
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
-    default-libmysqlclient-dev \
+    libmariadb-dev \
     pkg-config \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
@@ -33,11 +33,14 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies with retry
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    default-libmysqlclient-dev \
+    (apt-get install -y --no-install-recommends \
+    libmariadb3 \
     netcat-openbsd \
+    || apt-get update && apt-get install -y --no-install-recommends \
+    libmariadb3 \
+    netcat-openbsd) \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy from builder

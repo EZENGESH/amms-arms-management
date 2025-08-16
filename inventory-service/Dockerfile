@@ -1,46 +1,54 @@
-FROM python:3.9-slim AS builder
+FROM python:3.10-slim AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1
+# Set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
+# Set working directory
 WORKDIR /app
 
-# Install build dependencies
+# Install system dependencies with retry logic
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc python3-dev default-libmysqlclient-dev pkg-config
+    apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    libmariadb-dev \
+    pkg-config \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir --timeout=1000 --retries=10 -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
+# Copy the application
 COPY . .
 
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
 # --- Final image ---
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies with retry
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    default-libmysqlclient-dev \
-    default-mysql-client \
-    netcat-openbsd && \
-    rm -rf /var/lib/apt/lists/*
+    (apt-get install -y --no-install-recommends \
+    libmariadb3 \
+    netcat-openbsd \
+    || apt-get update && apt-get install -y --no-install-recommends \
+    libmariadb3 \
+    netcat-openbsd) \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy only necessary files from builder
+# Copy from builder
 COPY --from=builder /app /app
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-ENV PATH=/root/.local/bin:$PATH
-
-
-# Set environment variables for Django
-ENV DJANGO_SETTINGS_MODULE=inventory_service.settings
-
-# Gunicorn for production
+# Combined command for waiting, migrations, and running Gunicorn
 CMD bash -c \
     "echo 'Waiting for database...' && \
     while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
@@ -48,4 +56,4 @@ CMD bash -c \
     python manage.py makemigrations && \
     python manage.py migrate && \
     echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 user_service.wsgi:application"
