@@ -18,10 +18,11 @@ export default function Inventory() {
   const [stats, setStats] = useState(null);
   const [serviceStatus, setServiceStatus] = useState({ 
     isChecking: true,
-    isHealthy: false
+    isHealthy: false,
+    error: null
   });
 
-  // Service health check
+  // Check service health on component mount
   useEffect(() => {
     const checkService = async () => {
       try {
@@ -42,7 +43,7 @@ export default function Inventory() {
     checkService();
   }, []);
 
-  // Data fetching
+  // Fetch inventory data
   const fetchData = async () => {
     if (serviceStatus.isChecking) return;
     
@@ -58,8 +59,8 @@ export default function Inventory() {
       setFirearms(inventoryData || []);
       setStats(dashboardData);
     } catch (err) {
-      console.error('Inventory fetch error:', err);
-      setError(err.message);
+      console.error('Error fetching inventory:', err);
+      setError(err.message || 'Failed to load inventory data');
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ export default function Inventory() {
     fetchData();
   }, [serviceStatus.isChecking]);
 
-  // Search handler
+  // Handle search
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
@@ -82,107 +83,129 @@ export default function Inventory() {
       const results = await searchInventory(searchQuery);
       setFirearms(results || []);
     } catch (err) {
-      setError(err.message);
+      console.error('Search error:', err);
+      setError(err.message || 'Failed to search inventory');
     } finally {
       setLoading(false);
     }
   };
 
-  // Render helpers
-  const renderServiceStatus = () => (
-    !serviceStatus.isChecking && !serviceStatus.isHealthy && (
-      <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-        <p className="font-bold">Service Warning</p>
-        <p>Inventory service is unavailable. Data may be outdated.</p>
-        {serviceStatus.error && (
-          <p className="text-sm mt-1">Error: {serviceStatus.error}</p>
-        )}
-      </div>
-    )
-  );
-
-  const renderStats = () => (
-    stats && (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {Object.entries(stats.summary).map(([key, value]) => (
-          <div key={key} className="bg-blue-100 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-800">
-              {key.replace(/_/g, ' ').toUpperCase()}
-            </h3>
-            <p className="text-2xl font-bold text-blue-600">{value}</p>
-          </div>
-        ))}
-      </div>
-    )
-  );
-
-  const renderFirearms = () => (
-    <div className="overflow-x-auto">
-      <table className="w-full border border-gray-200 bg-white">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-3 border border-gray-200 text-left">Serial Number</th>
-            <th className="p-3 border border-gray-200 text-left">Model</th>
-            <th className="p-3 border border-gray-200 text-left">Type</th>
-            <th className="p-3 border border-gray-200 text-left">Manufacturer</th>
-          </tr>
-        </thead>
-        <tbody>
-          {firearms.length === 0 ? (
-            <tr>
-              <td colSpan="4" className="p-4 text-center text-gray-500">
-                {searchQuery ? 'No matching firearms found' : 'No firearms in inventory'}
-              </td>
-            </tr>
-          ) : (
-            firearms.map((firearm) => (
-              <tr key={firearm.id} className="hover:bg-gray-50">
-                <td className="p-3 border border-gray-200">{firearm.serial_number}</td>
-                <td className="p-3 border border-gray-200">{firearm.model}</td>
-                <td className="p-3 border border-gray-200">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                    {FIREARM_TYPES.find(t => t.value === firearm.type)?.label || firearm.type}
-                  </span>
-                </td>
-                <td className="p-3 border border-gray-200">{firearm.manufacturer}</td>
-              </tr>
-            ))
+  // Render service status warning
+  const renderServiceStatus = () => {
+    if (serviceStatus.isChecking) return null;
+    
+    if (!serviceStatus.isHealthy) {
+      return (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+          <p className="font-bold">Service Warning</p>
+          <p>Inventory service is unavailable. Data may be outdated.</p>
+          {serviceStatus.error && (
+            <p className="text-sm mt-1">Error: {serviceStatus.error}</p>
           )}
-        </tbody>
-      </table>
-    </div>
-  );
+        </div>
+      );
+    }
+    return null;
+  };
 
-  // Loading state
-  if (loading && firearms.length === 0) {
+  // Render statistics cards
+  const renderStats = () => {
+    if (!stats) return null;
+    
     return (
-      <AdminLayout>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-100 p-4 rounded-lg">
+          <h3 className="font-semibold text-blue-800">Total Firearms</h3>
+          <p className="text-2xl font-bold text-blue-600">
+            {stats.summary?.total_firearms || 0}
+          </p>
+        </div>
+        <div className="bg-green-100 p-4 rounded-lg">
+          <h3 className="font-semibold text-green-800">Types</h3>
+          <p className="text-2xl font-bold text-green-600">
+            {stats.type_statistics?.length || 0}
+          </p>
+        </div>
+        <div className="bg-yellow-100 p-4 rounded-lg">
+          <h3 className="font-semibold text-yellow-800">Manufacturers</h3>
+          <p className="text-2xl font-bold text-yellow-600">
+            {stats.manufacturer_statistics?.length || 0}
+          </p>
+        </div>
+        <div className="bg-purple-100 p-4 rounded-lg">
+          <h3 className="font-semibold text-purple-800">Calibres</h3>
+          <p className="text-2xl font-bold text-purple-600">
+            {stats.calibre_statistics?.length || 0}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // Render firearms table
+  const renderFirearmsTable = () => {
+    if (loading && firearms.length === 0) {
+      return (
         <div className="flex justify-center items-center h-64">
           <div className="text-lg">Loading inventory...</div>
         </div>
-      </AdminLayout>
-    );
-  }
+      );
+    }
 
-  // Error state
-  if (error) {
-    return (
-      <AdminLayout>
+    if (error) {
+      return (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+          <button 
+            onClick={fetchData}
+            className="ml-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm"
+          >
+            Retry
+          </button>
         </div>
-        <button 
-          onClick={fetchData}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          disabled={loading}
-        >
-          Retry
-        </button>
-      </AdminLayout>
-    );
-  }
+      );
+    }
 
-  // Main render
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border border-gray-200 bg-white">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-3 border border-gray-200 text-left">Serial Number</th>
+              <th className="p-3 border border-gray-200 text-left">Model</th>
+              <th className="p-3 border border-gray-200 text-left">Type</th>
+              <th className="p-3 border border-gray-200 text-left">Manufacturer</th>
+              <th className="p-3 border border-gray-200 text-left">Calibre</th>
+            </tr>
+          </thead>
+          <tbody>
+            {firearms.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500">
+                  {searchQuery ? 'No firearms found matching your search' : 'No firearms in inventory'}
+                </td>
+              </tr>
+            ) : (
+              firearms.map((firearm) => (
+                <tr key={firearm.id || firearm.serial_number} className="hover:bg-gray-50">
+                  <td className="p-3 border border-gray-200">{firearm.serial_number}</td>
+                  <td className="p-3 border border-gray-200">{firearm.model}</td>
+                  <td className="p-3 border border-gray-200">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                      {FIREARM_TYPES.find(t => t.value === firearm.type)?.label || firearm.type}
+                    </span>
+                  </td>
+                  <td className="p-3 border border-gray-200">{firearm.manufacturer}</td>
+                  <td className="p-3 border border-gray-200">{firearm.calibre}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -197,9 +220,9 @@ export default function Inventory() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search inventory..."
-              className="flex-1 p-2 border border-gray-300 rounded"
-              disabled={!serviceStatus.isHealthy}
+              placeholder="Search by serial, model, manufacturer..."
+              className="flex-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading || !serviceStatus.isHealthy}
             />
             <button
               type="submit"
@@ -208,10 +231,21 @@ export default function Inventory() {
             >
               Search
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                fetchData();
+              }}
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              disabled={loading || !serviceStatus.isHealthy}
+            >
+              Clear
+            </button>
           </div>
         </form>
 
-        {renderFirearms()}
+        {renderFirearmsTable()}
       </div>
     </AdminLayout>
   );
