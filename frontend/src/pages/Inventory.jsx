@@ -206,47 +206,21 @@ export default function Inventory() {
     );
   };
 
-  return (
-    <AdminLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4">Firearms Inventory</h1>
-        
-        {renderServiceStatus()}
-        {renderStats()}
-
-        <form onSubmit={handleSearch} className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by serial, model, manufacturer..."
-              className="flex-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={loading || !serviceStatus.isHealthy}
-            />
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              disabled={loading || !serviceStatus.isHealthy}
-            >
-              Search
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                fetchData();
-              }}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-              disabled={loading || !serviceStatus.isHealthy}
-            >
-              Clear
-            </button>
-          </div>
-        </form>
-
-        {renderFirearmsTable()}
+  // Replace your current return with this temporarily
+return (
+  <AdminLayout>
+    <div className="mb-6">
+      <h1 className="text-2xl font-bold mb-4">Firearms Inventory</h1>
+      
+      <div className="bg-gray-100 p-4 rounded mb-4">
+        <h2 className="font-bold mb-2">Debug Info:</h2>
+        <pre>Service Status: {JSON.stringify(serviceStatus, null, 2)}</pre>
+        <pre>Firearms Data: {JSON.stringify(firearms.slice(0, 3), null, 2)}</pre>
+        <pre>Stats: {JSON.stringify(stats, null, 2)}</pre>
       </div>
-    </AdminLayout>
-  );
+
+      {renderFirearmsTable()}
+    </div>
+  </AdminLayout>
+);
 }
