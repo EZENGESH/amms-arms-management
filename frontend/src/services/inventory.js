@@ -117,7 +117,7 @@ export async function addFirearm(firearmData) {
       throw new Error('Valid firearm data is required');
     }
     
-    const response = await inventoryApi.post('/api/arms/', firearmData);
+    const response = await inventoryApi.post('/arms/', firearmData);
     return response.data;
   } catch (error) {
     handleApiError(error, 'adding firearm');
