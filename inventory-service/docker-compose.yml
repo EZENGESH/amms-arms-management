@@ -11,7 +11,7 @@ environment:
   MYSQL_DATABASE: inventory_db
   MYSQL_USER: inventory_user
   MYSQL_PASSWORD: securepassword
-  MYSQL_ROOT_PASSWORD: your_root_password
+  MYSQL_ROOT_PASSWORD: rootpassword
 ports:
   - "3306:3306"
 volumes:
