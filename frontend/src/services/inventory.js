@@ -1,55 +1,32 @@
+// src/services/inventory.js
 import { inventoryApi } from './apiClient';
 
-/**
- * Inventory Service - Handles all inventory-related API calls
- */
+// Constants
+const DEFAULT_PAGINATION = {
+  page: 1,
+  limit: 50
+};
 
-// Enhanced error handler
-function handleApiError(error, operation) {
-  console.error(`Error ${operation}:`, error);
+// Utility function for handling API errors
+function handleInventoryError(error, context) {
+  console.error(`[Inventory Service] Error ${context}:`, error);
 
-  if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
-    throw new Error(`Cannot connect to inventory service. Please ensure the service is running on the correct port.`);
-  }
+  // Enhance error message with context
+  const enhancedError = new Error(`Failed to ${context}: ${error.message}`);
+  enhancedError.originalError = error;
 
-  if (error.response?.status === 404) {
-    throw new Error(`${operation} endpoint not found. Please check the API configuration.`);
-  }
-
-  if (error.response?.status === 400) {
-    const message = error.response.data?.message || error.response.data?.error || 'Invalid request';
-    throw new Error(`Bad request: ${message}`);
-  }
-
-  if (error.response?.status === 401) {
-    throw new Error('Unauthorized access. Please check your authentication.');
-  }
-
-  if (error.response?.status === 403) {
-    throw new Error('Access forbidden. You do not have permission to perform this action.');
-  }
-
-  if (error.response?.status === 500) {
-    throw new Error('Internal server error. Please try again later or contact support.');
-  }
-
-  // Generic error
-  const statusCode = error.response?.status || 'Network Error';
-  const message = error.response?.data?.message || error.message || 'Unknown error occurred';
-  throw new Error(`API Error (${statusCode}): ${message}`);
+  throw enhancedError;
 }
 
-// Service health check
+// Service Health Check
 export async function checkInventoryServiceHealth() {
   try {
-    // Use the correct API endpoint: /api/arms/
-    const response = await inventoryApi.get('/arms/');
+    await inventoryApi.get('/health');
     return {
       isHealthy: true,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
-    console.warn('Inventory service health check failed:', error.message);
     return {
       isHealthy: false,
       error: error.message,
@@ -58,100 +35,85 @@ export async function checkInventoryServiceHealth() {
   }
 }
 
-// Get inventory filtered by type
-export async function getInventoryByType(type, options = {}) {
+// Inventory Operations
+export async function getInventory(options = {}) {
   try {
-    if (!type || typeof type !== 'string') {
-      throw new Error('Valid firearm type is required');
-    }
-    
-    const { page = 1, limit = 50 } = options;
-    const params = new URLSearchParams({
-      type: encodeURIComponent(type.trim()),
-      page: page.toString(),
-      limit: limit.toString()
-    });
-    
-    const response = await inventoryApi.get(`/arms/by_type/?${params}`);
+    const params = {
+      ...DEFAULT_PAGINATION,
+      ...options
+    };
+    const response = await inventoryApi.get('/arms', { params });
     return response.data;
   } catch (error) {
-    handleApiError(error, 'fetching inventory by type');
+    handleInventoryError(error, 'fetch inventory');
   }
 }
 
-// Get dashboard statistics
-export async function getInventoryDashboard() {
-  try {
-    const response = await inventoryApi.get('/arms/dashboard/');
-    return response.data;
-  } catch (error) {
-    handleApiError(error, 'fetching inventory dashboard');
-  }
-}
-
-// Search inventory
 export async function searchInventory(query, options = {}) {
   try {
-    if (!query || typeof query !== 'string' || query.trim().length === 0) {
-      throw new Error('Search query is required and cannot be empty');
+    if (!query?.trim()) {
+      return getInventory(options);
     }
-    
-    const { page = 1, limit = 50 } = options;
-    const params = new URLSearchParams({
-      q: encodeURIComponent(query.trim()),
-      page: page.toString(),
-      limit: limit.toString()
-    });
-    
-    const response = await inventoryApi.get(`/arms/search/?${params}`);
+
+    const params = {
+      q: query.trim(),
+      ...DEFAULT_PAGINATION,
+      ...options
+    };
+    const response = await inventoryApi.get('/arms/search', { params });
     return response.data;
   } catch (error) {
-    handleApiError(error, 'searching inventory');
+    handleInventoryError(error, 'search inventory');
   }
 }
 
-// Add a new firearm
-export async function addFirearm(firearmData) {
+export async function getInventoryDashboard() {
   try {
-    if (!firearmData || typeof firearmData !== 'object') {
-      throw new Error('Valid firearm data is required');
-    }
-    
-    const response = await inventoryApi.post('/arms/', firearmData);
+    const response = await inventoryApi.get('/arms/dashboard');
     return response.data;
   } catch (error) {
-    handleApiError(error, 'adding firearm');
+    handleInventoryError(error, 'fetch dashboard stats');
   }
 }
 
-// Update an existing firearm
+// CRUD Operations
+export async function getFirearmById(id) {
+  try {
+    const response = await inventoryApi.get(`/arms/${id}`);
+    return response.data;
+  } catch (error) {
+    handleInventoryError(error, `fetch firearm ${id}`);
+  }
+}
+
+export async function createFirearm(firearmData) {
+  try {
+    const response = await inventoryApi.post('/arms', firearmData);
+    return response.data;
+  } catch (error) {
+    handleInventoryError(error, 'create firearm');
+  }
+}
+
 export async function updateFirearm(id, firearmData) {
   try {
-    if (!id) throw new Error('Firearm ID is required');
-    if (!firearmData || typeof firearmData !== 'object') {
-      throw new Error('Valid firearm data is required');
-    }
-    
-    const response = await inventoryApi.put(`/arms/${id}/`, firearmData);
+    const response = await inventoryApi.put(`/arms/${id}`, firearmData);
     return response.data;
   } catch (error) {
-    handleApiError(error, 'updating firearm');
+    handleInventoryError(error, `update firearm ${id}`);
   }
 }
 
-// Delete a firearm
 export async function deleteFirearm(id) {
   try {
-    if (!id) throw new Error('Firearm ID is required');
-
-    const response = await inventoryApi.delete(`/arms/${id}/`);
+    const response = await inventoryApi.delete(`/arms/${id}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, 'deleting firearm');
+    handleInventoryError(error, `delete firearm ${id}`);
   }
 }
 
-// Export configurations
+// Constants
 export const FIREARM_TYPES = [
   { value: 'RIFLE', label: 'Rifle' },
   { value: 'PISTOL', label: 'Pistol' },
@@ -161,53 +123,11 @@ export const FIREARM_TYPES = [
 ];
 
 export const INVENTORY_CONFIG = {
-  DEFAULT_PAGE_SIZE: 50,
+  DEFAULT_PAGE_SIZE: DEFAULT_PAGINATION.limit,
   MAX_PAGE_SIZE: 200,
-  API_ENDPOINTS: {
-    BASE: 'arms/',
-    DASHBOARD: 'arms/dashboard/',
-    SEARCH: 'arms/search/',
-    BY_TYPE: 'arms/by_type/',
-    HEALTH: 'arms/health/',
-    DETAIL: 'arms/:id/'
-  },
-  DEFAULT_PARAMS: {
-    page: 1,
-    limit: 50,
-    sort_by: 'serial_number',
-    sort_order: 'asc',
-    q: '',
-    type: ''
-  },
-  ERROR_MESSAGES: {
-    NETWORK: 'Cannot connect to inventory service. Please ensure the service is running.',
-    NOT_FOUND: 'The requested firearm was not found.',
-    AUTH: 'Unauthorized access. Please check your authentication.',
-    VALIDATION: 'Invalid request data.',
-    SERVER: 'Internal server error. Please try again later.'
-  },
-  FIREARM_TYPES: [
-    'RIFLE',
-    'PISTOL',
-    'SHOTGUN',
-    'MACHINE_GUN',
-    'SUBMACHINE_GUN'
+  SORT_OPTIONS: [
+    { value: 'serial_number', label: 'Serial Number' },
+    { value: 'model', label: 'Model' },
+    { value: 'manufacturer', label: 'Manufacturer' }
   ]
 };
-
-// Add the missing getInventory export
-export async function getInventory(options = {}) {
-  try {
-    const { page = 1, limit = 50 } = options;
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString()
-    });
-
-    // Use the correct endpoint for listing all firearms
-    const response = await inventoryApi.get(`/arms/?${params}`);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, 'fetching inventory');
-  }
-}

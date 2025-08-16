@@ -1,45 +1,39 @@
 // src/services/apiClient.js
 import axios from 'axios';
 
-// Define base URLs for different microservices
- // User registration service
-
-// Create Axios instance for User service
-const USER_API_BASE_URL = 'http://localhost:8001';
-const api = axios.create({
-  baseURL: USER_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
+// Configuration
+const API_CONFIG = {
+  USER_SERVICE: {
+    BASE_URL: 'http://localhost:8001',
+    TIMEOUT: 5000
   },
-});
+  INVENTORY_SERVICE: {
+    BASE_URL: 'http://localhost:8009/api',
+    TIMEOUT: 10000 // Longer timeout for inventory operations
+  }
+};
 
-// Create Axios instance for Inventory service
-const INVENTORY_API_BASE_URL = 'http://localhost:8009/api';
-const inventoryApi = axios.create({
-  baseURL: INVENTORY_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// Error messages
+const ERROR_MESSAGES = {
+  NETWORK: 'Network error - please check your internet connection',
+  TIMEOUT: 'Request timed out - the server is taking too long to respond',
+  SERVER: 'Server error - please try again later',
+  AUTH: 'Authentication required - please login again',
+  UNKNOWN: 'An unknown error occurred'
+};
 
-const logfirearmapi = axios.create({
-  baseURL: 'http://localhost:8009/api/',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// Create Axios instances
+function createAxiosInstance(baseURL, timeout) {
+  const instance = axios.create({
+    baseURL,
+    timeout,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
 
-// Function to refresh token (assumed to be implemented elsewhere)
-async function refreshToken() {
-  // Implement your token refresh logic here
-  // This is a placeholder, replace with your actual implementation
-  console.warn('refreshToken() function needs to be implemented');
-  return Promise.resolve({ access: 'new_access_token' });
-}
-
-// Add interceptor for adding token to request
-const addTokenInterceptor = (apiInstance) => {
-  apiInstance.interceptors.request.use(
+  // Request interceptor for auth token
+  instance.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('access_token');
       if (token) {
@@ -49,42 +43,73 @@ const addTokenInterceptor = (apiInstance) => {
     },
     (error) => Promise.reject(error)
   );
-};
 
-// Add interceptor for handling token refresh
-const addRefreshTokenInterceptor = (apiInstance) => {
-  apiInstance.interceptors.response.use(
+  // Response interceptor for error handling
+  instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
 
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      // Handle timeout errors
+      if (error.code === 'ECONNABORTED') {
+        throw new Error(ERROR_MESSAGES.TIMEOUT);
+      }
+
+      // Handle network errors
+      if (!error.response) {
+        throw new Error(ERROR_MESSAGES.NETWORK);
+      }
+
+      // Handle 401 Unauthorized
+      if (error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
         try {
           const newToken = await refreshToken();
           localStorage.setItem('access_token', newToken.access);
           originalRequest.headers.Authorization = `Bearer ${newToken.access}`;
-          return apiInstance(originalRequest); // Use the correct instance
-        } catch (err) {
-          console.error('Refresh token failed:', err);
+          return instance(originalRequest);
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
           window.location.href = '/login';
+          return Promise.reject(new Error(ERROR_MESSAGES.AUTH));
         }
       }
 
-      return Promise.reject(error);
+      // Handle other errors
+      const errorMessage = error.response.data?.message ||
+        ERROR_MESSAGES[error.response.status] ||
+        ERROR_MESSAGES.UNKNOWN;
+      throw new Error(errorMessage);
     }
   );
-};
 
-// Apply interceptors to both instances
-addTokenInterceptor(api);
-addRefreshTokenInterceptor(api);
-addTokenInterceptor(inventoryApi);
-addRefreshTokenInterceptor(inventoryApi);
-addTokenInterceptor(logfirearmapi);
-addRefreshTokenInterceptor(logfirearmapi);
+  return instance;
+}
 
-// Export the instances
-export { api, inventoryApi, logfirearmapi };
-export default api; // Default export remains userApi for backward compatibility
+// Token refresh function
+async function refreshToken() {
+  try {
+    const response = await axios.post(`${API_CONFIG.USER_SERVICE.BASE_URL}/auth/refresh`, {
+      refresh_token: localStorage.getItem('refresh_token')
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Refresh token failed:', error);
+    throw new Error(ERROR_MESSAGES.AUTH);
+  }
+}
+
+// Create service instances
+const userApi = createAxiosInstance(
+  API_CONFIG.USER_SERVICE.BASE_URL,
+  API_CONFIG.USER_SERVICE.TIMEOUT
+);
+
+const inventoryApi = createAxiosInstance(
+  API_CONFIG.INVENTORY_SERVICE.BASE_URL,
+  API_CONFIG.INVENTORY_SERVICE.TIMEOUT
+);
+
+export { userApi, inventoryApi };
+export default userApi;
