@@ -17,21 +17,10 @@ export default function LogFirearm() {
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
-    }
-  };
-
-  const validateForm = () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
     const errors = {};
     if (!formData.serial_number.trim()) errors.serial_number = 'Required';
     if (!formData.model.trim()) errors.model = 'Required';
@@ -39,29 +28,30 @@ export default function LogFirearm() {
     if (!formData.manufacturer.trim()) errors.manufacturer = 'Required';
     
     setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+    if (Object.keys(errors).length > 0) return;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
     setLoading(true);
     setError(null);
-    
+
     try {
       await addFirearm(formData);
       setSuccess(true);
       setTimeout(() => navigate('/inventory'), 2000);
     } catch (err) {
+      setError(err.message || 'Failed to add firearm');
       if (err.errors) {
         setValidationErrors(err.errors);
-        setError('Please fix validation errors');
-      } else {
-        setError(err.message || 'Failed to add firearm');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
 
@@ -83,35 +73,26 @@ export default function LogFirearm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block mb-1">Serial Number*</label>
-            <input
-              name="serial_number"
-              value={formData.serial_number}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded ${
-                validationErrors.serial_number ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {validationErrors.serial_number && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.serial_number}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block mb-1">Model*</label>
-            <input
-              name="model"
-              value={formData.model}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded ${
-                validationErrors.model ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {validationErrors.model && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.model}</p>
-            )}
-          </div>
+          {['serial_number', 'model', 'manufacturer'].map((field) => (
+            <div key={field}>
+              <label className="block mb-1 capitalize">
+                {field.replace('_', ' ')}*
+              </label>
+              <input
+                name={field}
+                value={formData[field]}
+                onChange={handleChange}
+                className={`w-full p-2 border rounded ${
+                  validationErrors[field] ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {validationErrors[field] && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors[field]}
+                </p>
+              )}
+            </div>
+          ))}
 
           <div>
             <label className="block mb-1">Type*</label>
@@ -131,27 +112,14 @@ export default function LogFirearm() {
               ))}
             </select>
             {validationErrors.type && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.type}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {validationErrors.type}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block mb-1">Manufacturer*</label>
-            <input
-              name="manufacturer"
-              value={formData.manufacturer}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded ${
-                validationErrors.manufacturer ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {validationErrors.manufacturer && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.manufacturer}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block mb-1">Calibre</label>
+            <label className="block mb-1">Caliber</label>
             <input
               name="calibre"
               value={formData.calibre}
