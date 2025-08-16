@@ -6,6 +6,6 @@ router = DefaultRouter()
 router.register(r'arms', ArmViewSet, basename='arm')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    
+    path('admin/', admin.site.urls),
+    path('api/', include(router.urls)),
 ]
