@@ -1,4 +1,8 @@
-FROM python:3.10-slim
+FROM python:3.10-slim AS builder
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Set working directory
 WORKDIR /app
@@ -10,23 +14,43 @@ RUN apt-get update && \
     python3-dev \
     default-libmysqlclient-dev \
     pkg-config \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install netcat
-RUN apt-get update && apt-get install -y netcat-openbsd
-
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-
 # Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy the application
 COPY . .
 
-# Your other commands (CMD, EXPOSE, etc.)
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "user_service.wsgi:application"]
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# --- Final image ---
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    default-libmysqlclient-dev \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy from builder
+COPY --from=builder /app /app
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Combined command for waiting, migrations, and running Gunicorn
+CMD bash -c \
+    "echo 'Waiting for database...' && \
+    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
+    echo 'Applying migrations...' && \
+    python manage.py makemigrations && \
+    python manage.py migrate && \
+    echo 'Starting server...' && \
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 user_service.wsgi:application"

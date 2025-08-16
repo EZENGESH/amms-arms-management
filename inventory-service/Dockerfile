@@ -36,8 +36,16 @@ COPY --from=builder /root/.local /root/.local
 
 ENV PATH=/root/.local/bin:$PATH
 
+
 # Set environment variables for Django
 ENV DJANGO_SETTINGS_MODULE=inventory_service.settings
 
 # Gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "inventory_service.wsgi:application"]
+CMD bash -c \
+    "echo 'Waiting for database...' && \
+    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
+    echo 'Applying migrations...' && \
+    python manage.py makemigrations && \
+    python manage.py migrate && \
+    echo 'Starting server...' && \
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
