@@ -72,11 +72,11 @@ WSGI_APPLICATION = 'inventory_service.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DJANGO_DB_NAME', default='inventory_db'),
-        'USER': config('DJANGO_DB_USER', default='inventory_user'),
-        'PASSWORD': config('DJANGO_DB_PASSWORD', default='securepassword'),
-        'HOST': config('DJANGO_DB_HOST', default='inventory-db'),
-        'PORT': config('DJANGO_DB_PORT', default='3306'),  # Use 3306 for internal Docker networking
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'connect_timeout': 30,
