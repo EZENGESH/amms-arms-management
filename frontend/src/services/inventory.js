@@ -42,7 +42,7 @@ function handleApiError(error, operation) {
 // Service health check
 export async function checkInventoryServiceHealth() {
   try {
-    // Use a valid health or list endpoint, not a malformed one
+    // Use the correct API endpoint: /api/arms/
     const response = await inventoryApi.get('/arms/');
     return {
       isHealthy: true,
@@ -72,7 +72,7 @@ export async function getInventoryByType(type, options = {}) {
       limit: limit.toString()
     });
     
-    const response = await inventoryApi.get(`/api/arms/by_type/?${params}`);
+    const response = await inventoryApi.get(`/arms/by_type/?${params}`);
     return response.data;
   } catch (error) {
     handleApiError(error, 'fetching inventory by type');
@@ -82,7 +82,7 @@ export async function getInventoryByType(type, options = {}) {
 // Get dashboard statistics
 export async function getInventoryDashboard() {
   try {
-    const response = await inventoryApi.get('/api/arms/dashboard/');
+    const response = await inventoryApi.get('/arms/dashboard/');
     return response.data;
   } catch (error) {
     handleApiError(error, 'fetching inventory dashboard');
@@ -103,7 +103,7 @@ export async function searchInventory(query, options = {}) {
       limit: limit.toString()
     });
     
-    const response = await inventoryApi.get(`/api/arms/search/?${params}`);
+    const response = await inventoryApi.get(`/arms/search/?${params}`);
     return response.data;
   } catch (error) {
     handleApiError(error, 'searching inventory');
