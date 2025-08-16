@@ -205,7 +205,7 @@ export async function getInventory(options = {}) {
     });
 
     // Use the correct endpoint for listing all firearms
-    const response = await inventoryApi.get(`/api/arms/?${params}`);
+    const response = await inventoryApi.get(`/arms/?${params}`);
     return response.data;
   } catch (error) {
     handleApiError(error, 'fetching inventory');
