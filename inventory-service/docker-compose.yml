@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: mysql:8.0
@@ -6,9 +8,9 @@ services:
     env_file:
       - db.env
     environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-inventory_db}  # Changed from DJANGO_DB_NAME to DB_NAME
+      MYSQL_USER: ${DB_USER:-inventory_user}    # Changed from DJANGO_DB_USER to DB_USER
+      MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword}  # Changed from DJANGO_DB_PASSWORD
       MYSQL_ROOT_PASSWORD: rootpassword
     ports:
       - "3310:3306"
@@ -31,10 +33,10 @@ services:
       gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
     environment:
       - DB_HOST=db
-      - DB_PORT=3310  
-      - DB_NAME=inventory_db
-      - DB_USER=inventory_user
-      - DB_PASSWORD=securepassword
+      - DB_PORT=3310
+      - DB_NAME=${DB_NAME:-inventory_db}
+      - DB_USER=${DB_USER:-inventory_user}
+      - DB_PASSWORD=${DB_PASSWORD:-securepassword}
     depends_on:
       db:
         condition: service_healthy
@@ -58,10 +60,13 @@ services:
     build:
       context: .
     environment:
-      DJANGO_DB_HOST: db
-      DJANGO_DB_PORT: 3310
-      DJANGO_DB_NAME: inventory_db
-      DJANGO_DB_USER: inventory_user
-      DJANGO_DB_PASSWORD: securepassword
+      - DB_HOST=db
     networks:
       - backend-network
+
+volumes:
+  db_data:
+
+networks:  # Add this network definition
+  backend-network:
+    driver: bridge
