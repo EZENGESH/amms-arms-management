@@ -63,18 +63,17 @@ WSGI_APPLICATION = 'inventory_service.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DB_NAME', default='inventory_db'),
-        'USER': config('DB_USER', default='inventory_user'),
-        'PASSWORD': config('DB_PASSWORD', default='securepassword'),
-        'HOST': config('DB_HOST', default='db'),  # No default value - will raise error if not set
-        'PORT': config('DB_PORT', default='3310'),
+        'NAME': config('DJANGO_DB_NAME', default='inventory_db'),
+        'USER': config('DJANGO_DB_USER', default='inventory_user'),
+        'PASSWORD': config('DJANGO_DB_PASSWORD', default='securepassword'),
+        'HOST': config('DJANGO_DB_HOST', default='db'),
+        'PORT': config('DJANGO_DB_PORT', default='3310'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'connect_timeout': 30,
         }
     }
 }
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
