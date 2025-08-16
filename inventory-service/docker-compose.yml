@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
@@ -62,7 +60,7 @@ healthcheck:
     build:
       context: .
     environment:
-      - DB_HOST=db
+      - DB_HOST=inventory-db
     networks:
       - backend-network
 
