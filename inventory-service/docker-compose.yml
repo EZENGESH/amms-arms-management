@@ -32,7 +32,7 @@ healthcheck:
       python manage.py migrate &&
       gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
     environment:
-      - DB_HOST=db
+      - DB_HOST=inventory-db
       - DB_PORT=3306
       - DB_NAME=${DB_NAME:-inventory_db}
       - DB_USER=${DB_USER:-inventory_user}
