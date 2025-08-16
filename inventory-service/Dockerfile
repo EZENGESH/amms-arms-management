@@ -24,7 +24,10 @@ WORKDIR /app
 
 # Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends default-libmysqlclient-dev netcat-openbsd && \
+    apt-get install -y --no-install-recommends \
+    default-libmysqlclient-dev \
+    default-mysql-client \
+    netcat-openbsd && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy only necessary files from builder

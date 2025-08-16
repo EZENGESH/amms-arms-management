@@ -1,5 +1,4 @@
 services:
-  # MySQL Database for Inventory Service
   db:
     image: mysql:8.0
     container_name: inventory_db
@@ -12,89 +11,53 @@ services:
       MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - "3306:3306"
+      - "3310:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./mysql/conf.d:/etc/mysql/conf.d
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
       timeout: 5s
-      retries: 3
+      retries: 5
 
-  # Inventory Service (Django Application)
   inventory-service:
     build:
       context: .
     command: >
-      sh -c "while ! nc -z db 3306; do sleep 1; done &&
+      sh -c "while ! nc -z db 3310; do sleep 2; done &&
       python manage.py migrate &&
       gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
-    volumes:
-      - .:/app               
-      - static_volume:/app/staticfiles
-      - ./logs:/app/logs
-    ports:
-      - "8002:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3310
+      - DB_NAME=${DJANGO_DB_NAME}
+      - DB_USER=${DJANGO_DB_USER}
+      - DB_PASSWORD=${DJANGO_DB_PASSWORD}
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - backend-network
-    env_file:
-      - .env
-    environment:
-    - DB_HOST=inventory-db  # Must match service name
-    - DB_PORT=3306
-    - DB_NAME=inventory_db
-    - DB_USER=inventory_user
-    - DB_PASSWORD=securepassword
-    - DJANGO_DB_HOST=inventory-db
 
-  # Redis Service (Message Broker for Celery)
   redis:
     image: redis:alpine
     container_name: inventory_redis
-    ports:
-      - "6379:6379"
-    networks:
-      - backend-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 3
-    # Example: bind mount for Redis config
-    volumes:
-      - ./redis-data:/data
+      retries: 5
+    networks:
+      - backend-network
 
-  # Celery Worker Service
   celery:
     build:
       context: .
-    container_name: inventory_celery
-    command: celery -A inventory_service worker --loglevel=info
-    depends_on:
-      - redis
-      - db
-    networks:
-      - backend-network
-    env_file:
-      - .env
     environment:
       DJANGO_DB_HOST: db
-      DJANGO_DB_PORT: 3306
-    volumes:
-      - .:/app
-      - static_volume:/app/staticfiles
-      - ./logs:/app/logs
-
-volumes:
-  db_data:
-  static_volume:
-
-networks:
-  backend-network:
-    driver: bridge
+    networks:
+      - backend-network
