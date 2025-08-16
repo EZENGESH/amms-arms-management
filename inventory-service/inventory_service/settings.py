@@ -88,9 +88,6 @@ DATABASES = {
 
 # Add at the BOTTOM of settings.py
 
-if DATABASES['default']['HOST'] != 'db':
-    print("\nERROR: Database host is not 'db'!", file=sys.stderr)
-    sys.exit(1)
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
