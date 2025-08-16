@@ -206,3 +206,18 @@ export const INVENTORY_CONFIG = {
     'SUBMACHINE_GUN'
   ]
 };
+export async function getInventory(options = {}) {
+  try {
+    const { page = 1, limit = 50 } = options;
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    // Use the correct endpoint for listing all firearms
+    const response = await inventoryApi.get(`/api/arms/?${params}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'fetching inventory');
+  }
+}
