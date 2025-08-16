@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Define base URLs for different microservices
 const USER_API_BASE_URL = 'http://localhost:8001'; // User registration service
-const INVENTORY_API_BASE_URL = 'http://localhost:8009/'; // Inventory service
+const INVENTORY_API_BASE_URL = 'http://localhost:8009/api'; // Inventory service
 
 // Create Axios instance for User service
 const api = axios.create({
