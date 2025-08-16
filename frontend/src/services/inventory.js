@@ -132,7 +132,7 @@ export async function updateFirearm(id, firearmData) {
       throw new Error('Valid firearm data is required');
     }
     
-    const response = await inventoryApi.put(`/api/arms/${id}/`, firearmData);
+    const response = await inventoryApi.put(`/arms/${id}/`, firearmData);
     return response.data;
   } catch (error) {
     handleApiError(error, 'updating firearm');
@@ -143,8 +143,8 @@ export async function updateFirearm(id, firearmData) {
 export async function deleteFirearm(id) {
   try {
     if (!id) throw new Error('Firearm ID is required');
-    
-    const response = await inventoryApi.delete(`/api/arms/${id}/`);
+
+    const response = await inventoryApi.delete(`/arms/${id}/`);
     return response.data;
   } catch (error) {
     handleApiError(error, 'deleting firearm');
