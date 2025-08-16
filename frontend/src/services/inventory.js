@@ -9,13 +9,19 @@ export const FIREARM_TYPES = [
   { value: 'other', label: 'Other' }
 ];
 
-export const getInventory = async () => {
+export const addFirearm = async (firearmData) => {
   try {
-    const response = await inventoryApi.get('/arms/');
-    return Array.isArray(response.data) ? response.data : [];
+    const response = await inventoryApi.post('/arms/', firearmData);
+    return response.data;
   } catch (error) {
-    console.error('Inventory load error:', error);
-    return [];
+    console.error('Error adding firearm:', error);
+    if (error.response?.data) {
+      throw {
+        message: 'Validation failed',
+        errors: error.response.data
+      };
+    }
+    throw error;
   }
 };
 
