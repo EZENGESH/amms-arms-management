@@ -7,32 +7,32 @@ import { inventoryApi } from './apiClient';
 // Enhanced error handler
 function handleApiError(error, operation) {
   console.error(`Error ${operation}:`, error);
-  
+
   if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
     throw new Error(`Cannot connect to inventory service. Please ensure the service is running on the correct port.`);
   }
-  
+
   if (error.response?.status === 404) {
     throw new Error(`${operation} endpoint not found. Please check the API configuration.`);
   }
-  
+
   if (error.response?.status === 400) {
     const message = error.response.data?.message || error.response.data?.error || 'Invalid request';
     throw new Error(`Bad request: ${message}`);
   }
-  
+
   if (error.response?.status === 401) {
     throw new Error('Unauthorized access. Please check your authentication.');
   }
-  
+
   if (error.response?.status === 403) {
     throw new Error('Access forbidden. You do not have permission to perform this action.');
   }
-  
+
   if (error.response?.status === 500) {
     throw new Error('Internal server error. Please try again later or contact support.');
   }
-  
+
   // Generic error
   const statusCode = error.response?.status || 'Network Error';
   const message = error.response?.data?.message || error.message || 'Unknown error occurred';
@@ -49,30 +49,11 @@ export async function checkInventoryServiceHealth() {
     };
   } catch (error) {
     console.warn('Inventory service health check failed:', error.message);
-    return { 
-      isHealthy: false, 
-      error: error.message, 
-      timestamp: new Date().toISOString() 
+    return {
+      isHealthy: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
     };
-  }
-}
-
-// Get all inventory items
-export async function getInventory(options = {}) {
-  try {
-    const { page = 1, limit = 50, sortBy = 'serial_number', sortOrder = 'asc' } = options;
-    
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      sort_by: sortBy,
-      sort_order: sortOrder
-    });
-    
-    const response = await inventoryApi.get(`/api/arms/?${params}`);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, 'fetching inventory');
   }
 }
 
@@ -182,9 +163,46 @@ export const INVENTORY_CONFIG = {
   DEFAULT_PAGE_SIZE: 50,
   MAX_PAGE_SIZE: 200,
   API_ENDPOINTS: {
-    BASE: '/api/arms/',
-    DASHBOARD: '/api/arms/dashboard/',
-    SEARCH: '/api/arms/search/',
-    BY_TYPE: '/api/arms/by_type/'
-  }
+    // Base CRUD endpoints (matches your ViewSet)
+    BASE: 'arms/',  // Note: No leading /api/ since it's often prefixed by axios baseURL
+
+    // Custom endpoints from your service methods
+    DASHBOARD: 'arms/dashboard/',
+    SEARCH: 'arms/search/',
+    BY_TYPE: 'arms/by_type/',
+
+    // Health check endpoint (consistent with your checkInventoryServiceHealth())
+    HEALTH: 'arms/health/',
+
+    // Individual item endpoint pattern (for GET/PUT/DELETE)
+    DETAIL: 'arms/:id/'  // :id will be replaced with actual ID
+  },
+
+  // Default query parameters (matches your service methods)
+  DEFAULT_PARAMS: {
+    page: 1,
+    limit: 50,
+    sort_by: 'serial_number',
+    sort_order: 'asc',
+    q: '',          // For search
+    type: ''        // For type filtering
+  },
+
+  // Error messages that match your handleApiError implementation
+  ERROR_MESSAGES: {
+    NETWORK: 'Cannot connect to inventory service. Please ensure the service is running.',
+    NOT_FOUND: 'The requested firearm was not found.',
+    AUTH: 'Unauthorized access. Please check your authentication.',
+    VALIDATION: 'Invalid request data.',
+    SERVER: 'Internal server error. Please try again later.'
+  },
+
+  // Constants that match your FIREARM_TYPES
+  FIREARM_TYPES: [
+    'RIFLE',
+    'PISTOL',
+    'SHOTGUN',
+    'MACHINE_GUN',
+    'SUBMACHINE_GUN'
+  ]
 };
