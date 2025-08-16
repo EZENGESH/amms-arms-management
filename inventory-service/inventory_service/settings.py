@@ -61,14 +61,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'inventory_service.wsgi.application'
 
 # Database
+# ...existing code...
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'inventory_db'),
-        'USER': os.getenv('DB_USER', 'inventory_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'securepassword'),
-        'HOST': 'db',  # Hardcoded to match docker service name
-        'PORT': os.getenv('DB_PORT', '3306'),  # Must match docker-compose port mapping
+        'NAME': config('DJANGO_DB_NAME', default='inventory_db'),
+        'USER': config('DJANGO_DB_USER', default='inventory_user'),
+        'PASSWORD': config('DJANGO_DB_PASSWORD', default='securepassword'),
+        'HOST': config('DJANGO_DB_HOST', default='db'),
+        'PORT': config('DJANGO_DB_PORT', default='3306'),  # Use 3306 for internal Docker networking
         'OPTIONS': {
             'charset': 'utf8mb4',
             'connect_timeout': 30,
@@ -76,6 +77,7 @@ DATABASES = {
         }
     }
 }
+# ...existing code...
 
 # Add at the BOTTOM of settings.py
 
