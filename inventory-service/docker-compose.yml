@@ -1,26 +1,30 @@
+version: '3.8'
+
 services:
   db:
     image: mysql:8.0
     container_name: inventory_db
     restart: always
-env_file:
-  - db.env
-environment:
-  MYSQL_DATABASE: inventory_db
-  MYSQL_USER: inventory_user
-  MYSQL_PASSWORD: securepassword
-  MYSQL_ROOT_PASSWORD: rootpassword
-ports:
-  - "3306:3306"
-volumes:
-  - inventory-db_data:/var/lib/mysql
-networks:
-  - backend-network
-healthcheck:
-  test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
-  interval: 5s
-  timeout: 5s
-  retries: 5
+    env_file:
+      - db.env
+    environment:
+      MYSQL_DATABASE: inventory_db
+      MYSQL_USER: inventory_user
+      MYSQL_PASSWORD: securepassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - inventory-db_data:/var/lib/mysql
+    networks:
+      backend-network:
+        aliases:
+          - inventory-db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   inventory-service:
     ports:
@@ -64,3 +68,9 @@ healthcheck:
     networks:
       - backend-network
 
+volumes:
+  inventory-db_data:
+
+networks:
+  backend-network:
+    driver: bridge
