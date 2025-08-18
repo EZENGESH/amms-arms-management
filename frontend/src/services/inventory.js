@@ -78,7 +78,13 @@ export const searchInventory = async (query) => {
     const response = await inventoryApi.get('/arms/search/', {
       params: { q: query }
     });
-    return Array.isArray(response.data) ? response.data : [];
+    // Fix: Handle paginated response
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    return [];
   } catch (error) {
     console.error('Error searching inventory:', error);
     throw error;
