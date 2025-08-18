@@ -48,3 +48,24 @@ class ArmViewSet(ModelViewSet):
                 'manufacturer_statistics': [],
                 'calibre_statistics': []
             }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='search')
+    def search(self, request):
+        """
+        Search firearms by model, serial_number, manufacturer, or calibre.
+        Example: /api/arms/search/?q=ak
+        """
+        query = request.query_params.get('q', '').strip()
+        queryset = self.get_queryset()
+        if query:
+            queryset = queryset.filter(
+                models.Q(model__icontains=query) |
+                models.Q(serial_number__icontains=query) |
+                models.Q(manufacturer__icontains=query) |
+                models.Q(calibre__icontains=query)
+            )
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer =
