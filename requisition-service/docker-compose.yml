@@ -3,10 +3,10 @@ services:
   requisition-service:
     build:
       context: .
-      dockerfile: Dockerfile  # Explicit Dockerfile reference
+      dockerfile: Dockerfile
     container_name: requisition_service
     command: >
-      sh -c "until mysql -h db -u $$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      sh -c "until mysql -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 5; done &&
       python manage.py migrate &&
       gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
@@ -14,14 +14,14 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
     ports:
-      - "8003:8000"
+      - "8004:8000"  # Changed to expose on 8004 for clarity
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
     environment:
-      - DJANGO_DB_HOST=db  # Hardcoded to service name
+      - DJANGO_DB_HOST=db
       - DJANGO_DB_PORT=3306
       - DJANGO_DB_NAME=${DJANGO_DB_NAME}
       - DJANGO_DB_USER=${DJANGO_DB_USER}
@@ -39,7 +39,7 @@ services:
 
   # Redis Service (Message Broker for Celery)
   redis:
-    image: redis:7.2-alpine  # Pinned version
+    image: redis:7.2-alpine
     container_name: requisition_redis
     ports:
       - "6380:6379"
@@ -102,7 +102,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$MYSQL_USER", "-p$MYSQL_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -120,4 +120,4 @@ volumes:
 networks:
   backend-network:
     driver: bridge
-    name: amms_backend  # Explicit network name
+    name: amms_backend
