@@ -5,4 +5,5 @@ mysqlclient>=2.1.0
 celery==5.3.6
 redis==4.6.0
 gunicorn
-django-cor-sheaders
+django-cors-headers
+
