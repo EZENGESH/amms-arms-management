@@ -5,29 +5,34 @@ FROM python:3.10-slim as builder
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Set working directory
-WORKDIR /app
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    POETRY_VERSION=1.7.1
 
 # Install system dependencies with upgrade and cleanup
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-    gcc \
+    build-essential \
     python3-dev \
     default-libmysqlclient-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only requirements first to leverage Docker cache
-COPY requirements.txt .
+WORKDIR /app
 
-# Install Python dependencies
+# Install Poetry
 RUN pip install --upgrade pip && \
-    pip install --user -r requirements.txt
+    pip install poetry==${POETRY_VERSION}
 
-# Copy the rest of the application
+# Copy dependency files
+COPY pyproject.toml poetry.lock* ./
+
+# Install project dependencies (including dev dependencies for builder)
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi --only main
+
+# Copy application code
 COPY . .
 
 # Collect static files
@@ -39,38 +44,43 @@ FROM python:3.10-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/app/.local/bin:${PATH}"
+    PATH="/home/appuser/.local/bin:${PATH}" \
+    PYTHONPATH="/app"
 
-WORKDIR /app
-
-# Install runtime dependencies with upgrade and cleanup
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     libmariadb3 \
     netcat-openbsd \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy from builder
-COPY --from=builder /app /app
-COPY --from=builder /root/.local /root/.local
-COPY --from=builder /app/staticfiles /app/staticfiles
+WORKDIR /app
 
-# Create non-root user and switch to it
-RUN useradd -m appuser && \
+# Create non-root user early for better security
+RUN useradd --create-home appuser && \
+    mkdir -p /app/staticfiles && \
     chown -R appuser:appuser /app
+
+# Copy from builder stage
+COPY --from=builder --chown=appuser:appuser /app /app
+COPY --from=builder --chown=appuser:appuser /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder --chown=appuser:appuser /app/staticfiles /app/staticfiles
+
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8004/health/ || exit 1
+# Health check with dependencies verification
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
 
-# Combined command with proper error handling
-CMD ["/bin/bash", "-c", \
-    "echo 'Waiting for database...' && \
-    while ! nc -z \"${DB_HOST}\" \"${DB_PORT}\"; do sleep 2; done && \
-    echo 'Applying migrations...' && \
-    python manage.py makemigrations && \
-    python manage.py migrate && \
-    echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 --access-logfile - --error-logfile - user_service.wsgi:application"]
+# Entrypoint script for pre-start checks
+COPY --chown=appuser:appuser docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
+# Default command
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", \
+    "--threads", "2", "--timeout", "120", "--access-logfile", "-", \
+    "--error-logfile", "-", "user_service.wsgi:application"]
