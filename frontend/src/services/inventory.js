@@ -23,7 +23,13 @@ export const checkInventoryServiceHealth = async () => {
 export const getInventory = async (options = {}) => {
   try {
     const response = await inventoryApi.get('/arms/', { params: options });
-    return Array.isArray(response.data) ? response.data : [];
+    // Fix: Use .results if paginated, else fallback to array
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    return [];
   } catch (error) {
     console.error('Error fetching inventory:', error);
     throw error;
