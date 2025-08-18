@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Arm
 from .serializers import ArmSerializer
+from django.db.models import Q
 import logging
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ class ArmViewSet(ModelViewSet):
                 'calibre_statistics': []
             }, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='search')
+       @action(detail=False, methods=['get'], url_path='search')
     def search(self, request):
         """
         Search firearms by model, serial_number, manufacturer, or calibre.
@@ -59,10 +60,10 @@ class ArmViewSet(ModelViewSet):
         queryset = self.get_queryset()
         if query:
             queryset = queryset.filter(
-                models.Q(model__icontains=query) |
-                models.Q(serial_number__icontains=query) |
-                models.Q(manufacturer__icontains=query) |
-                models.Q(calibre__icontains=query)
+                Q(model__icontains=query) |
+                Q(serial_number__icontains=query) |
+                Q(manufacturer__icontains=query) |
+                Q(calibre__icontains=query)
             )
         page = self.paginate_queryset(queryset)
         if page is not None:
