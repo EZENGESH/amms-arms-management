@@ -6,9 +6,12 @@ import AdminLayout from '../layouts/AdminLayout';
 
 export default function RequisitionForm() {
   const [formData, setFormData] = useState({
-    itemName: '',
-    quantity: '',
-    description: ''
+    service_number: '',
+    rank: '',
+    name: '',
+    station_unit: '',
+    firearm_type: '',
+    quantity: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -31,9 +34,12 @@ export default function RequisitionForm() {
 
     try {
       const response = await axios.post('http://localhost:8000/api/requisition/', {
-        item_name: formData.itemName, // Make sure field names match your Django model
-        quantity: formData.quantity,
-        description: formData.description,
+        service_number: formData.service_number,
+        rank: formData.rank,
+        name: formData.name,
+        station_unit: formData.station_unit,
+        firearm_type: formData.firearm_type,
+        quantity: formData.quantity
       });
 
       console.log('Response:', response.data);
@@ -41,9 +47,12 @@ export default function RequisitionForm() {
       
       // Reset the form
       setFormData({
-        itemName: '',
-        quantity: '',
-        description: ''
+        service_number: '',
+        rank: '',
+        name: '',
+        station_unit: '',
+        firearm_type: '',
+        quantity: ''
       });
     } catch (error) {
       console.error('Error submitting requisition:', error);
@@ -65,17 +74,81 @@ export default function RequisitionForm() {
       )}
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {/* Item Name */}
+        {/* Service Number */}
         <div>
-          <label htmlFor="itemName" className="block mb-2 text-sm font-medium text-gray-700">
-            Item Name
+          <label htmlFor="service_number" className="block mb-2 text-sm font-medium text-gray-700">
+            Service Number
           </label>
           <input
             type="text"
-            id="itemName"
-            value={formData.itemName}
+            id="service_number"
+            value={formData.service_number}
             onChange={handleChange}
-            placeholder="Enter item name"
+            placeholder="Enter service number"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        {/* Rank */}
+        <div>
+          <label htmlFor="rank" className="block mb-2 text-sm font-medium text-gray-700">
+            Rank
+          </label>
+          <input
+            type="text"
+            id="rank"
+            value={formData.rank}
+            onChange={handleChange}
+            placeholder="Enter rank"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        {/* Name */}
+        <div>
+          <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-700">
+            Name
+          </label>
+          <input
+            type="text"
+            id="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Enter name"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        {/* Station/Unit */}
+        <div>
+          <label htmlFor="station_unit" className="block mb-2 text-sm font-medium text-gray-700">
+            Station/Unit
+          </label>
+          <input
+            type="text"
+            id="station_unit"
+            value={formData.station_unit}
+            onChange={handleChange}
+            placeholder="Enter station or unit"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        {/* Firearm Type */}
+        <div>
+          <label htmlFor="firearm_type" className="block mb-2 text-sm font-medium text-gray-700">
+            Firearm Type
+          </label>
+          <input
+            type="text"
+            id="firearm_type"
+            value={formData.firearm_type}
+            onChange={handleChange}
+            placeholder="Enter firearm type"
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -97,22 +170,6 @@ export default function RequisitionForm() {
           />
         </div>
 
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block mb-2 text-sm font-medium text-gray-700">
-            Description
-          </label>
-          <textarea
-            id="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows="4"
-            placeholder="Write a short description..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            required
-          />
-        </div>
-
         {/* Submit Button */}
         <div className="flex justify-center">
           <Button type="submit" disabled={loading}>
@@ -121,6 +178,6 @@ export default function RequisitionForm() {
         </div>
       </form>
     </div>
-    </AdminLayout>  
-  );
-}
+        </AdminLayout>
+      );
+    }

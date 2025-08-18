@@ -4,6 +4,7 @@ import axios from 'axios';
 // Define base URLs for different microservices
 const USER_API_BASE_URL = 'http://localhost:8001'; // User registration service
 const INVENTORY_API_BASE_URL = 'http://localhost:8009/api';
+const REQUISITION_API_BASE_URL = 'http://localhost:8010/api'; // <-- Add your requisition service base URL
 
 // Create Axios instance for User service
 const api = axios.create({
@@ -23,6 +24,14 @@ const inventoryApi = axios.create({
 
 const logfirearmapi = axios.create({
   baseURL: 'http://localhost:8009/api/',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Create Axios instance for Requisition service
+const requisitionApi = axios.create({
+  baseURL: REQUISITION_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -76,14 +85,16 @@ const addRefreshTokenInterceptor = (apiInstance) => {
   );
 };
 
-// Apply interceptors to both instances
+// Apply interceptors to all instances
 addTokenInterceptor(api);
 addRefreshTokenInterceptor(api);
 addTokenInterceptor(inventoryApi);
 addRefreshTokenInterceptor(inventoryApi);
 addTokenInterceptor(logfirearmapi);
 addRefreshTokenInterceptor(logfirearmapi);
+addTokenInterceptor(requisitionApi);
+addRefreshTokenInterceptor(requisitionApi);
 
 // Export the instances
-export { api, inventoryApi, logfirearmapi };
-export default api; // Default export remains userApi for backward compatibility
+export { api, inventoryApi, logfirearmapi, requisitionApi };
+export default api; // Default export remains the same
