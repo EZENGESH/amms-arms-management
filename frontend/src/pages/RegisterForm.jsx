@@ -1,113 +1,172 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AuthLayout from '../layouts/AuthLayout';
+import { useState } from 'react';
 import Button from '../components/Button';
-import { registerUser } from '../services/auth';
+import AdminLayout from '../layouts/AdminLayout';
+import { createRequisition } from '../services/requisitions'; // <-- Import the function
 
-export default function RegisterForm() {
-  const navigate = useNavigate();
+export default function RequisitionForm() {
   const [formData, setFormData] = useState({
     service_number: '',
     rank: '',
-    first_name: '',
-    last_name: '',
-    email: '',
-    username: '',
-    password: '',
-    confirm_password: '',
+    name: '',
+    station_unit: '',
+    firearm_type: '',
+    quantity: ''
   });
-  
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Handle input change
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value
+    }));
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    if (formData.password !== formData.confirm_password) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      setIsLoading(false);
-      return;
-    }
+    setLoading(true);
+    setMessage('');
 
     try {
-      const { confirm_password, ...userData } = formData;
-      await registerUser(userData);
-      setSuccess(true);
-      setTimeout(() => navigate('/login'), 2000);
-    } catch (err) {
-      setError(err.message);
+      await createRequisition(formData); // <-- Use the imported function
+      setMessage('Requisition submitted successfully!');
+      // Reset the form
+      setFormData({
+        service_number: '',
+        rank: '',
+        name: '',
+        station_unit: '',
+        firearm_type: '',
+        quantity: ''
+      });
+    } catch (error) {
+      console.error('Error submitting requisition:', error);
+      setMessage('Failed to submit requisition.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <AuthLayout>
-      <h1 className="text-2xl font-bold text-center mb-6">Create Account</h1>
-      
-      {error && <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>}
-      {success && <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-        Registration successful! Redirecting to login...
-      </div>}
+    <AdminLayout>
+      <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-md">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">New Requisition</h1>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        {Object.entries(formData).map(([name, value]) => (
-          name !== 'confirm_password' && (
+        {message && (
+          <div className={`mb-4 text-center text-sm font-medium ${message.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>
+            {message}
+          </div>
+        )}
+
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          {/* Service Number */}
+          <div>
+            <label htmlFor="service_number" className="block mb-2 text-sm font-medium text-gray-700">
+              Service Number
+            </label>
             <input
-              key={name}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type={name === 'password' ? 'password' : name === 'email' ? 'email' : 'text'}
-              name={name}
-              placeholder={
-                name.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') + 
-                (name === 'password' ? ' (min 8 characters)' : '')
-              }
-              value={value}
+              type="text"
+              id="service_number"
+              value={formData.service_number}
               onChange={handleChange}
-              disabled={isLoading}
+              placeholder="Enter service number"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-          )
-        ))}
-        <input
-          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          type="password"
-          name="confirm_password"
-          placeholder="Confirm Password"
-          value={formData.confirm_password}
-          onChange={handleChange}
-          disabled={isLoading}
-          required
-        />
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Creating Account...' : 'Register'}
-        </Button>
-      </form>
-      
-      <div className="mt-6 text-center">
-        <p className="text-gray-600 mb-3">Already have an account?</p>
-        <Button 
-          onClick={() => navigate('/login')}
-          disabled={isLoading}
-          className="w-full bg-gray-500 hover:bg-gray-700"
-        >
-          Back to Login
-        </Button>
+          </div>
+
+          {/* Rank */}
+          <div>
+            <label htmlFor="rank" className="block mb-2 text-sm font-medium text-gray-700">
+              Rank
+            </label>
+            <input
+              type="text"
+              id="rank"
+              value={formData.rank}
+              onChange={handleChange}
+              placeholder="Enter rank"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          {/* Name */}
+          <div>
+            <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-700">
+              Name
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Enter name"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          {/* Station/Unit */}
+          <div>
+            <label htmlFor="station_unit" className="block mb-2 text-sm font-medium text-gray-700">
+              Station/Unit
+            </label>
+            <input
+              type="text"
+              id="station_unit"
+              value={formData.station_unit}
+              onChange={handleChange}
+              placeholder="Enter station or unit"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          {/* Firearm Type */}
+          <div>
+            <label htmlFor="firearm_type" className="block mb-2 text-sm font-medium text-gray-700">
+              Firearm Type
+            </label>
+            <input
+              type="text"
+              id="firearm_type"
+              value={formData.firearm_type}
+              onChange={handleChange}
+              placeholder="Enter firearm type"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <label htmlFor="quantity" className="block mb-2 text-sm font-medium text-gray-700">
+              Quantity
+            </label>
+            <input
+              type="number"
+              id="quantity"
+              value={formData.quantity}
+              onChange={handleChange}
+              placeholder="Enter quantity"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-center">
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Submitting...' : 'Submit Requisition'}
+            </Button>
+          </div>
+        </form>
       </div>
-    </AuthLayout>
+    </AdminLayout>
   );
 }
