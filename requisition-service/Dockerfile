@@ -14,7 +14,6 @@ RUN apt-get update && \
     python3-dev \
     libmariadb-dev \
     pkg-config \
-    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -37,10 +36,8 @@ WORKDIR /app
 RUN apt-get update && \
     (apt-get install -y --no-install-recommends \
     libmariadb3 \
-    netcat-openbsd \
     || apt-get update && apt-get install -y --no-install-recommends \
-    libmariadb3 \
-    netcat-openbsd) \
+    libmariadb3) \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy from builder
@@ -48,10 +45,8 @@ COPY --from=builder /app /app
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Combined command for waiting, migrations, and running Gunicorn
-CMD bash -c \
-    "echo 'Waiting for database...' && \
-    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
+# Use docker-compose.yml's DB wait logic, so just run migrations and start server here
+CMD bash -c "\
     echo 'Applying migrations...' && \
     python manage.py makemigrations && \
     python manage.py migrate && \
