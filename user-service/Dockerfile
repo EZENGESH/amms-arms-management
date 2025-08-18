@@ -1,28 +1,33 @@
-FROM python:3.10-slim AS builder
+# Builder stage
+FROM python:3.10-slim as builder
 
 # Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies with retry logic
+# Install system dependencies with upgrade and cleanup
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
-    libmariadb-dev \
+    default-libmysqlclient-dev \
     pkg-config \
-    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy only requirements first to leverage Docker cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
 
-# Copy the application
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install --user -r requirements.txt
+
+# Copy the rest of the application
 COPY . .
 
 # Collect static files
@@ -31,29 +36,41 @@ RUN python manage.py collectstatic --noinput
 # --- Final image ---
 FROM python:3.10-slim
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.local/bin:${PATH}"
+
 WORKDIR /app
 
-# Install runtime dependencies with retry
+# Install runtime dependencies with upgrade and cleanup
 RUN apt-get update && \
-    (apt-get install -y --no-install-recommends \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
     libmariadb3 \
     netcat-openbsd \
-    || apt-get update && apt-get install -y --no-install-recommends \
-    libmariadb3 \
-    netcat-openbsd) \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy from builder
 COPY --from=builder /app /app
-COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /app/staticfiles /app/staticfiles
 
-# Combined command for waiting, migrations, and running Gunicorn
-CMD bash -c \
+# Create non-root user and switch to it
+RUN useradd -m appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8004/health/ || exit 1
+
+# Combined command with proper error handling
+CMD ["/bin/bash", "-c", \
     "echo 'Waiting for database...' && \
-    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
+    while ! nc -z \"${DB_HOST}\" \"${DB_PORT}\"; do sleep 2; done && \
     echo 'Applying migrations...' && \
     python manage.py makemigrations && \
     python manage.py migrate && \
     echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 user_service.wsgi:application"
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 --access-logfile - --error-logfile - user_service.wsgi:application"]
