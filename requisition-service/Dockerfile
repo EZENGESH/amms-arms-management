@@ -56,4 +56,4 @@ CMD bash -c \
     python manage.py makemigrations && \
     python manage.py migrate && \
     echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 user_service.wsgi:application"
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 requisition_service.wsgi.application"
