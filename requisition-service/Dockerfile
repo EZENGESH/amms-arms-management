@@ -54,7 +54,9 @@ USER appuser
 
 # Combined command for migrations and running Gunicorn
 CMD bash -c \
-    "echo 'Applying migrations...' && \
+    "echo 'Waiting for database...' && \
+    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
+    echo 'Applying migrations...' && \
     python manage.py makemigrations && \
     python manage.py migrate && \
     echo 'Starting server...' && \
