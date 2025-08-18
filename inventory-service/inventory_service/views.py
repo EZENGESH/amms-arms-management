@@ -50,7 +50,7 @@ class ArmViewSet(ModelViewSet):
                 'calibre_statistics': []
             }, status=status.HTTP_200_OK)
 
-       @action(detail=False, methods=['get'], url_path='search')
+    @action(detail=False, methods=['get'], url_path='search')
     def search(self, request):
         """
         Search firearms by model, serial_number, manufacturer, or calibre.
@@ -70,4 +70,4 @@ class ArmViewSet(ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
