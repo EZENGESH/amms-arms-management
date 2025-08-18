@@ -33,25 +33,25 @@ export default function Inventory() {
     checkService();
   }, []);
 
-  // Fetch data when service is healthy
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const [inventoryData, dashboardData] = await Promise.all([
-        searchQuery ? searchInventory(searchQuery) : getInventory(),
-        getInventoryDashboard()
-      ]);
+// Fetch data when service is healthy
+const fetchData = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const [inventoryData, dashboardData] = await Promise.all([
+      searchQuery ? searchInventory(searchQuery) : getInventory(),
+      getInventoryDashboard()
+    ]);
 
-      setFirearms(inventoryData);
-      setStats(dashboardData);
-    } catch (err) {
-      setError(err.message || 'Failed to load inventory data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.log('Inventory data:', inventoryData); // <-- Add this line
+    setFirearms(inventoryData);
+    setStats(dashboardData);
+  } catch (err) {
+    setError(err.message || 'Failed to load inventory data');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     if (serviceStatus.isHealthy) {
