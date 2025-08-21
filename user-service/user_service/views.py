@@ -99,7 +99,10 @@ class LoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
-        
+
+        if not username or not password:
+            return Response({"error": "Username and password required"}, status=400)
+
         user = authenticate(username=username, password=password)
         if user:
             token, _ = Token.objects.get_or_create(user=user)
