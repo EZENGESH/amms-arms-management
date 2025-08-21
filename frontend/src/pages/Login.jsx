@@ -66,7 +66,6 @@ export default function Login() {
           required
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
-          autoComplete="current-password"
         />
         <Button type="submit" disabled={isLoading}>
           {isLoading ? 'Logging in...' : 'Login'}
