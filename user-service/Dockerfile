@@ -7,14 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies with retry logic
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
-    libmariadb-dev \
+    default-libmysqlclient-dev \
     pkg-config \
-    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -33,14 +32,11 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime dependencies with retry
+# Install runtime dependencies
 RUN apt-get update && \
-    (apt-get install -y --no-install-recommends \
-    libmariadb3 \
+    apt-get install -y --no-install-recommends \
+    default-mysql-client \
     netcat-openbsd \
-    || apt-get update && apt-get install -y --no-install-recommends \
-    libmariadb3 \
-    netcat-openbsd) \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy from builder
@@ -48,12 +44,19 @@ COPY --from=builder /app /app
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Combined command for waiting, migrations, and running Gunicorn
+# Create a non-root user for security
+RUN useradd -m -r appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
+# Combined command
 CMD bash -c \
     "echo 'Waiting for database...' && \
     while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
     echo 'Applying migrations...' && \
-    python manage.py makemigrations && \
-    python manage.py migrate && \
+    python manage.py migrate --noinput && \
     echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 user_service.wsgi:application"
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 --access-logfile - user_service.wsgi:application"
