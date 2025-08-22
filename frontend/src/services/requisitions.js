@@ -16,3 +16,15 @@ export async function getRequisitions() {
   }
   return [];
 }
+app.post('/api/requisitions/', async (req, res) => {
+  try {
+    const requisition = await Requisition.create(req.body);
+    res.status(201).json(requisition); // Always send a response
+  } catch (error) {
+    console.error('Error creating requisition:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
