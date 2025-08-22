@@ -56,7 +56,9 @@ USER appuser
 # Combined command for migrations and running Gunicorn
 CMD bash -c \
     "echo 'Waiting for database...' && \
-    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
+    until mysql -h \$DJANGO_DB_HOST -u\$DJANGO_DB_USER -p\$DJANGO_DB_PASSWORD -e 'SELECT 1;'; do \
+      echo 'Waiting for database...'; sleep 5; \
+    done && \
     echo 'Applying migrations...' && \
     python manage.py makemigrations && \
     python manage.py migrate && \
