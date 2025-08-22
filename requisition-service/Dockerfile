@@ -13,6 +13,7 @@ RUN apt-get update && \
     gcc \
     python3-dev \
     libmariadb-dev \
+    default-mysql-client \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
