@@ -1,6 +1,8 @@
 services:
   # Requisition Service (Django Application)
   requisition-service:
+    ports:
+      - "8003:8000"
     build:
       context: .
       dockerfile: Dockerfile
