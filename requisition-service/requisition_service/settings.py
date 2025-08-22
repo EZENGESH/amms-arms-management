@@ -103,8 +103,9 @@ DATABASES = {
         'HOST': config('DJANGO_DB_HOST', default='localhost'),
         'PORT': config('DJANGO_DB_PORT', default='3306'),
         'OPTIONS': {
-            'charset': 'utf8mb4', # Use utf8mb4 for full Unicode support
+            'charset': 'utf8mb4',
             'init_command': "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+            'ssl': {'ssl-mode': 'DISABLED'}  # ← ADD THIS LINE
         },
     }
 }

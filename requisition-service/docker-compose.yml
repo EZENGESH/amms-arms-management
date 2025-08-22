@@ -14,7 +14,7 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
     ports:
-      - "8004:8000"  # Changed to expose on 8004 for clarity
+      - "8003:8000"  # Changed to expose on 8003 for clarity
     depends_on:
       db:
         condition: service_healthy
