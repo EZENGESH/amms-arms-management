@@ -5,11 +5,11 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: requisition_service
-   command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 5; done &&
-      python manage.py migrate &&
-      gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+  command: >
+    sh -c "until mysql -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
+    echo 'Waiting for database...'; sleep 5; done &&
+    python manage.py migrate &&
+    gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
 
   # Redis Service (Message Broker for Celery)
   redis:
