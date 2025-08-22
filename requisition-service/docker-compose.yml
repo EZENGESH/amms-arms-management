@@ -7,36 +7,31 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: requisition_service
+    env_file:
+      - .env
     command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 5; done &&
-      python manage.py migrate &&
-      gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+      sh -c "echo 'Waiting for database...' &&
+             until mysql --ssl-mode=DISABLED -h $$DJANGO_DB_HOST -u $$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+               echo 'Waiting for database connection...'; sleep 5;
+             done &&
+             echo 'Database is up. Applying migrations...' &&
+             python manage.py migrate &&
+             echo 'Starting Gunicorn...' &&
+             gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     depends_on:
-      - db
-      - redis
-    environment:
-      - DJANGO_DB_HOST=requisition-db
-      - DJANGO_DB_PORT=3306
-      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
-      - DJANGO_DB_USER=${DJANGO_DB_USER}
-      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - backend-network
 
-  # Redis Service (Message Broker for Celery)
+  # Redis Service
   redis:
     image: redis:7.2-alpine
     container_name: requisition_redis
     ports:
       - "6380:6379"
-    networks:
-      - backend-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -44,57 +39,43 @@ services:
       retries: 3
     volumes:
       - redis_data:/data
+    networks:
+      - backend-network
 
   # Celery Worker Service
   celery:
     build:
       context: .
     container_name: requisition_celery
+    env_file:
+      - .env
     command: celery -A requisition_service worker --loglevel=info --concurrency=4
     depends_on:
       - redis
       - db
-    environment:
-      - DJANGO_DB_HOST=requisition-db
-      - DJANGO_DB_PORT=3306
-      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
-      - DJANGO_DB_USER=${DJANGO_DB_USER}
-      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - backend-network
-    healthcheck:
-      test: ["CMD", "celery", "-A", "requisition_service", "inspect", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # MySQL Database for Requisition Service
   db:
     image: mysql:8.0
     container_name: requisition-db
     restart: unless-stopped
+    # Map variables from .env to what MySQL container expects
     environment:
       MYSQL_DATABASE: ${DJANGO_DB_NAME}
       MYSQL_USER: ${DJANGO_DB_USER}
       MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_ROOT_HOST: '%'
     ports:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./mysql-config:/etc/mysql/conf.d
     command:
       - --default-authentication-plugin=mysql_native_password
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      # Use the correct variables for the healthcheck
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DJANGO_DB_USER}", "-p${DJANGO_DB_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -103,11 +84,7 @@ services:
 
 volumes:
   db_data:
-    driver: local
-  static_volume:
-    driver: local
   redis_data:
-    driver: local
 
 networks:
   backend-network:
