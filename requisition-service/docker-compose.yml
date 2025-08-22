@@ -7,11 +7,28 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: requisition_service
-  command: >
-    sh -c "until mysql --ssl-mode=DISABLED -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-    echo 'Waiting for database...'; sleep 5; done &&
-    python manage.py migrate &&
-    gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    command: >
+      sh -c "until mysql --ssl-mode=DISABLED -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 5; done &&
+      python manage.py migrate &&
+      gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DJANGO_DB_HOST=requisition-db
+      - DJANGO_DB_PORT=3306
+      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
+      - DJANGO_DB_USER=${DJANGO_DB_USER}
+      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - backend-network
+
   # Redis Service (Message Broker for Celery)
   redis:
     image: redis:7.2-alpine
@@ -77,7 +94,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$MYSQL_USER", "-p$MYSQL_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
