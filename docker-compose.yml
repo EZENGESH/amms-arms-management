@@ -13,7 +13,7 @@ services:
     depends_on:
       - db
     command: >
-      sh -c "until nc -z db 3306; do
+      sh -c "until mysql -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
     restart: unless-stopped
@@ -67,7 +67,7 @@ services:
     depends_on:
       - inventory-db
     command: >
-      sh -c "until nc -z inventory-db 3306; do
+      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
     restart: unless-stopped
@@ -102,7 +102,7 @@ services:
     depends_on:
       - requisition-db
     command: >
-      sh -c "until nc -z requisition-db 3306; do
+      sh -c "until mysql -h requisition-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
       python manage.py migrate &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 requisition_service.wsgi:application"
@@ -138,7 +138,7 @@ services:
     depends_on:
       - reporting-db
     command: >
-      sh -c "until nc -z reporting-db 3306; do
+      sh -c "until mysql -h reporting-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 reporting_service.wsgi:application"
     restart: unless-stopped
