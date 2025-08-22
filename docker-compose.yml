@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   # User Service
   user-service:
@@ -53,76 +54,76 @@ services:
       - backend-network
     restart: unless-stopped
 
-# Requisition Service
-requisition-service:
-  build:
-    context: ./requisition-service
-  ports:
-    - "8003:8000"
-  env_file:
-    - ./requisition-service/.env
-  networks:
-    - backend-network
-  depends_on:
-    - requisition-db
-  command: >
-    sh -c "until nc -z requisition-db 3306; do
-    echo 'Waiting for database...'; sleep 2; done &&
-    python manage.py migrate &&
-    gunicorn --bind 0.0.0.0:8000 --workers 4 requisition_service.wsgi:application"
-  restart: unless-stopped
+  # Inventory Service
+  inventory-service:
+    build:
+      context: ./inventory-service
+    ports:
+      - "8009:8000"
+    env_file:
+      - ./inventory-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - inventory-db
+    command: >
+      sh -c "until nc -z inventory-db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+    restart: unless-stopped
 
-# Inventory Service
-inventory-service:
-  build:
-    context: ./inventory-service
-  ports:
-    - "8002:8000"
-  env_file:
-    - ./inventory-service/.env
-  networks:
-    - backend-network
-  depends_on:
-    - inventory-db
-  command: >
-    sh -c "until nc -z inventory-db 3306; do
-    echo 'Waiting for database...'; sleep 2; done &&
-    python manage.py migrate &&
-    gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
-  restart: unless-stopped
+  inventory-db:
+    image: mysql:8.0
+    ports:
+      - "3308:3306"
+    env_file:
+      - ./inventory-service/db.env
+    volumes:
+      - inventory-mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
 
-inventory-db:
-  image: mysql:8.0
-  ports:
-    - "3308:3306"
-  env_file:
-    - ./inventory-service/db.env
-  volumes:
-    - inventory-mysql-data:/var/lib/mysql
-  networks:
-    - backend-network
-  healthcheck:
-    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
-    interval: 5s
-    timeout: 10s
-    retries: 10
-  restart: unless-stopped
-requisition-db:
-  image: mysql:8.0
-  ports:
-    - "3309:3306"
-  env_file:
-    - ./requisition-service/db.env
-  volumes:
-    - requisition-mysql-data:/var/lib/mysql
-  networks:
-    - backend-network
-  healthcheck:
-    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
-    interval: 5s
-    timeout: 10s
-    retries: 10
-  restart: unless-stopped
+  # Requisition Service
+  requisition-service:
+    build:
+      context: ./requisition-service
+    ports:
+      - "8003:8000"
+    env_file:
+      - ./requisition-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - requisition-db
+    command: >
+      sh -c "until nc -z requisition-db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      python manage.py migrate &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 requisition_service.wsgi:application"
+    restart: unless-stopped
+
+  requisition-db:
+    image: mysql:8.0
+    ports:
+      - "3309:3306"
+    env_file:
+      - ./requisition-service/db.env
+    volumes:
+      - requisition-mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
 
   # Reporting Service
   reporting-service:
@@ -136,6 +137,10 @@ requisition-db:
       - backend-network
     depends_on:
       - reporting-db
+    command: >
+      sh -c "until nc -z reporting-db 3306; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 reporting_service.wsgi:application"
     restart: unless-stopped
 
   reporting-db:
@@ -148,6 +153,11 @@ requisition-db:
       - reporting-mysql-data:/var/lib/mysql
     networks:
       - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
     restart: unless-stopped
 
   # API Gateway
