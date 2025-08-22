@@ -5,37 +5,11 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: requisition_service
-  command: >
-    sh -c "until mysql -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-    echo 'Waiting for database...'; sleep 5; done &&
-    python manage.py migrate &&
-    gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
-    volumes:
-      - .:/app
-      - static_volume:/app/staticfiles
-    ports:
-      - "8003:8000"  # Changed to expose on 8003 for clarity
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    environment:
-      - DJANGO_DB_HOST=db
-      - DJANGO_DB_PORT=3306
-      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
-      - DJANGO_DB_USER=${DJANGO_DB_USER}
-      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
-    networks:
-      - backend-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+   command: >
+      sh -c "until mysql --ssl-mode=DISABLED -h $DJANGO_DB_HOST -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 5; done &&
+      python manage.py migrate &&
+      gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
 
   # Redis Service (Message Broker for Celery)
   redis:
