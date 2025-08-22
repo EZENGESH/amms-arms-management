@@ -35,6 +35,7 @@ const requisitionApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 // Function to refresh token (assumed to be implemented elsewhere)
@@ -84,6 +85,34 @@ const addRefreshTokenInterceptor = (apiInstance) => {
     }
   );
 };
+
+// Add this function to your apiClient.js
+const addErrorHandlingInterceptor = (apiInstance, serviceName) => {
+  apiInstance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      console.error(`${serviceName} API Error:`, error);
+
+      if (error.code === 'ECONNABORTED') {
+        error.message = `Request to ${serviceName} service timed out`;
+      } else if (!error.response) {
+        error.message = `${serviceName} service is not responding`;
+      } else if (error.response.status === 502 || error.response.status === 503) {
+        error.message = `${serviceName} service is temporarily unavailable`;
+      } else if (error.response.status === 404) {
+        error.message = `${serviceName} endpoint not found`;
+      }
+
+      return Promise.reject(error);
+    }
+  );
+};
+
+// Apply the error handling interceptor to each instance
+addErrorHandlingInterceptor(api, 'User');
+addErrorHandlingInterceptor(inventoryApi, 'Inventory');
+addErrorHandlingInterceptor(logfirearmapi, 'Firearm Log');
+addErrorHandlingInterceptor(requisitionApi, 'Requisition');
 
 // Apply interceptors to all instances
 addTokenInterceptor(api);
