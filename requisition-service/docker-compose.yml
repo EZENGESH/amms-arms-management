@@ -38,7 +38,7 @@ services:
       - redis
       - db
     environment:
-      - DJANGO_DB_HOST=db
+      - DJANGO_DB_HOST=requisition-db
       - DJANGO_DB_PORT=3306
       - DJANGO_DB_NAME=${DJANGO_DB_NAME}
       - DJANGO_DB_USER=${DJANGO_DB_USER}
@@ -59,7 +59,7 @@ services:
   # MySQL Database for Requisition Service
   db:
     image: mysql:8.0
-    container_name: requisition_db
+    container_name: requisition-db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DJANGO_DB_NAME}
