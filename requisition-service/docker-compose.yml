@@ -63,10 +63,10 @@ services:
     restart: unless-stopped
     # Map variables from .env to what MySQL container expects
     environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: requisition_db
+      MYSQL_USER: requisition_service
+      MYSQL_PASSWORD: securepassword
+      MYSQL_ROOT_PASSWORD: rootpassword
     env_file:
       - requisition-service/.env
     ports:
