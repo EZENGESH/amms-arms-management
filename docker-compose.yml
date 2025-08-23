@@ -113,7 +113,7 @@ services:
     ports:
       - "3309:3306"
     env_file:
-      - ./requisition-service/db.env
+      - ./requisition-service/.env
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
@@ -147,8 +147,11 @@ services:
     image: mysql:8.0
     ports:
       - "3310:3306"
-    env_file:
-      - ./reporting-service/db.env
+    environment:
+      MYSQL_DATABASE: ${DJANGO_DB_NAME}
+      MYSQL_USER: ${DJANGO_DB_USER}
+      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
