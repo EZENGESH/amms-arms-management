@@ -148,7 +148,7 @@ services:
     ports:
       - "3310:3306"
     env_file:
-      - ./reporting-service/db.env
+      - ./reporting-service/.env
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
