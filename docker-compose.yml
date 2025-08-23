@@ -1,4 +1,4 @@
-# The 'version' tag is obsolete and has been removed.
+version: '3.8'
 services:
   # User Service
   user-service:
@@ -11,12 +11,10 @@ services:
     networks:
       - backend-network
     depends_on:
-      db:
-        condition: service_healthy
-    # FIX: Using correct --ssl-mode=DISABLED flag
+      - db
     command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for user database...'; sleep 2; done &&
+      sh -c "until mysql -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
     restart: unless-stopped
 
@@ -24,20 +22,14 @@ services:
     image: mysql:8.0
     ports:
       - "3307:3306"
-    # FIX: Standardized environment mapping. Assumes ./user-service/.env provides these variables.
     env_file:
-      - ./user-service/.env
-    environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      - ./user-service/db.env
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${DJANGO_DB_USER}", "-p$${DJANGO_DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -50,8 +42,14 @@ services:
     depends_on:
       - redis
       - db
-    env_file:
-      - ./user-service/.env # Use env_file for consistency
+    environment:
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: 3306
+      DJANGO_DB_NAME: user_service_db
+      DJANGO_DB_USER: user_db
+      DJANGO_DB_PASSWORD: securepassword
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     networks:
       - backend-network
     restart: unless-stopped
@@ -67,12 +65,10 @@ services:
     networks:
       - backend-network
     depends_on:
-      inventory-db:
-        condition: service_healthy
-    # FIX: Using correct --ssl-mode=DISABLED flag
+      - inventory-db
     command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for inventory database...'; sleep 2; done &&
+      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
     restart: unless-stopped
 
@@ -80,20 +76,14 @@ services:
     image: mysql:8.0
     ports:
       - "3308:3306"
-    # FIX: Standardized environment mapping.
     env_file:
-      - ./inventory-service/.env
-    environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      - ./inventory-service/db.env
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${DJANGO_DB_USER}", "-p$${DJANGO_DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -110,12 +100,10 @@ services:
     networks:
       - backend-network
     depends_on:
-      requisition-db:
-        condition: service_healthy
-    # FIX: Using correct --ssl-mode=DISABLED flag
+      - requisition-db
     command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h requisition-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for requisition database...'; sleep 2; done &&
+      sh -c "until mysql -h requisition-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 2; done &&
       python manage.py migrate &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 requisition_service.wsgi:application"
     restart: unless-stopped
@@ -124,20 +112,14 @@ services:
     image: mysql:8.0
     ports:
       - "3309:3306"
-    # FIX: Standardized environment mapping.
     env_file:
-      - ./requisition-service/.env
-    environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      - ./requisition-service/db.env
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${DJANGO_DB_USER}", "-p$${DJANGO_DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -154,12 +136,10 @@ services:
     networks:
       - backend-network
     depends_on:
-      reporting-db:
-        condition: service_healthy
-    # FIX: Using correct --ssl-mode=DISABLED flag
+      - reporting-db
     command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h reporting-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for reporting database...'; sleep 2; done &&
+      sh -c "until mysql -h reporting-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 2; done &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 reporting_service.wsgi:application"
     restart: unless-stopped
 
@@ -167,20 +147,14 @@ services:
     image: mysql:8.0
     ports:
       - "3310:3306"
-    # FIX: Standardized environment mapping. This resolves the "variable not set" warnings.
     env_file:
-      - ./reporting-service/.env
-    environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      - ./reporting-service/db.env
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${DJANGO_DB_USER}", "-p$${DJANGO_DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -200,8 +174,6 @@ services:
     depends_on:
       - user-service
       - inventory-service
-      - requisition-service
-      - reporting-service
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
