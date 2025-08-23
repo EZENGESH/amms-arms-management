@@ -67,8 +67,6 @@ services:
       MYSQL_USER: requisition_service
       MYSQL_PASSWORD: securepassword
       MYSQL_ROOT_PASSWORD: rootpassword
-    env_file:
-      - requisition-service/.env
     ports:
       - "3307:3306"
     volumes:
