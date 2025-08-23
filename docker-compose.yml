@@ -113,7 +113,7 @@ services:
     ports:
       - "3309:3306"
     env_file:
-      - ./requisition-service/db.env
+      - ./requisition-service/.env
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
