@@ -55,39 +55,46 @@ services:
     restart: unless-stopped
 
   # Inventory Service
-  inventory-service:
-    build:
-      context: ./inventory-service
-    ports:
-      - "8009:8000"
-    env_file:
-      - ./inventory-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      - inventory-db
-    command: >
-      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
-    restart: unless-stopped
+inventory-service:
+  build:
+    context: ./inventory-service
+  ports:
+    - "8009:8000"
+  env_file:
+    - ./inventory-service/.env
+  networks:
+    - backend-network
+  depends_on:
+    inventory-db:
+      condition: service_healthy
+  command: >
+    sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl=0 -e 'SELECT 1;' ; do
+    echo 'Waiting for database...'; sleep 2; done &&
+    python manage.py migrate &&
+    gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+  restart: unless-stopped
 
-  inventory-db:
-    image: mysql:8.0
-    ports:
-      - "3308:3306"
-    env_file:
-      - ./inventory-service/db.env
-    volumes:
-      - inventory-mysql-data:/var/lib/mysql
-    networks:
-      - backend-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    restart: unless-stopped
+inventory-db:
+  image: mysql:8.0
+  ports:
+    - "3308:3306"
+  environment:
+    MYSQL_DATABASE: ${DJANGO_DB_NAME}
+    MYSQL_USER: ${DJANGO_DB_USER}
+    MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
+    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+  env_file:
+    - ./inventory-service/.env
+  volumes:
+    - inventory-mysql-data:/var/lib/mysql
+  networks:
+    - backend-network
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DJANGO_DB_USER}", "-p${DJANGO_DB_PASSWORD}"]
+    interval: 5s
+    timeout: 10s
+    retries: 10
+  restart: unless-stopped
 
   # Requisition Service
   requisition-service:
