@@ -22,16 +22,10 @@ COPY . .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Create logs directory and set proper permissions BEFORE creating user
-RUN mkdir -p /app/logs && \
-    chmod 755 /app/logs && \
-    touch /app/logs/django.log && \
-    chmod 666 /app/logs/django.log
-
 # Startup command
 CMD bash -c "echo 'Waiting for database...'; \
 while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
   sleep 1; \
 done; \
 python manage.py migrate --noinput; \
-exec python manage.py runserver --bind 0.0.0.0:8000 "
+exec gunicorn --bind 0.0.0.0:8000 --workers 2 user_service.wsgi:application"
