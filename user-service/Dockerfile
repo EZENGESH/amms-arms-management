@@ -28,4 +28,4 @@ while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
   sleep 1; \
 done; \
 python manage.py migrate --noinput; \
-exec python manage.py runserver --bind 0.0.0.0:8000 "
+exec python manage.py runserver 0.0.0.0:8000 "
