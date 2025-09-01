@@ -7,10 +7,6 @@ ENV PYTHONFAULTHANDLER=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
 
-# Create a non-root user
-RUN addgroup --system --gid 1000 appgroup && \
-    adduser --system --uid 1000 --gid 1000 appuser
-
 WORKDIR /app
 
 # Install system dependencies including pkg-config and build tools
@@ -25,6 +21,8 @@ RUN apt-get update && \
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
+
+RUN python manage.py collectstatic --noinput
 
 # Install Python dependencies with trusted hosts and retry options
 RUN pip install --upgrade pip && \
