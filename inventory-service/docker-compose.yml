@@ -16,22 +16,24 @@ services:
       retries: 10
     restart: unless-stopped
 
-  inventory-service:
-    build:
-      context: ./inventory-service
-    ports:
-      - "8009:8000"
-    env_file:
-      - ./inventory-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      - inventory-db
-    command: >
-      sh -c "until mysql -h inventory-db -u$$MYSQL_USER -p$$MYSQL_PASSWORD -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
-    restart: unless-stopped
+inventory-service:
+  build:
+    context: ./inventory-service
+  ports:
+    - "8009:8000"
+  env_file:
+    - ./inventory-service/.env
+  networks:
+    - backend-network
+  depends_on:
+    inventory-db:
+      condition: service_healthy
+  command: >
+    sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
+    echo 'Waiting for database...'; sleep 2; done &&
+    python manage.py collectstatic --noinput &&
+    gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+  restart: unless-stopped
 
   redis:
     image: redis:alpine
