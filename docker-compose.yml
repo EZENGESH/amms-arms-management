@@ -8,15 +8,16 @@ services:
     ports:
       - "8001:8000"
     env_file:
-      - ./user-service/db.env
+      - ./user-service/.env
     networks:
       - backend-network
     depends_on:
       db:
         condition: service_healthy
     command: >
-      sh -c "until mysql -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      sh -c "until mysql -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
+      python manage.py collectstatic --noinput &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
     restart: unless-stopped
 
@@ -31,7 +32,7 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -60,15 +61,16 @@ services:
     ports:
       - "8009:8000"
     env_file:
-      - ./inventory-service/db.env
+      - ./inventory-service/.env
     networks:
       - backend-network
     depends_on:
       inventory-db:
         condition: service_healthy
     command: >
-      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
+      python manage.py collectstatic --noinput &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
     restart: unless-stopped
 
@@ -83,7 +85,7 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -97,16 +99,17 @@ services:
     ports:
       - "8003:8000"
     env_file:
-      - ./requisition-service/db.env
+      - ./requisition-service/.env
     networks:
       - backend-network
     depends_on:
       requisition-db:
         condition: service_healthy
     command: >
-      sh -c "until mysql -h requisition-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      sh -c "until mysql -h requisition-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
       python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 requisition_service.wsgi:application"
     restart: unless-stopped
 
@@ -121,7 +124,7 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -142,8 +145,9 @@ services:
       reporting-db:
         condition: service_healthy
     command: >
-      sh -c "until mysql -h reporting-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD -e 'SELECT 1;' ; do
+      sh -c "until mysql -h reporting-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
       echo 'Waiting for database...'; sleep 2; done &&
+      python manage.py collectstatic --noinput &&
       gunicorn --bind 0.0.0.0:8000 --workers 4 reporting_service.wsgi:application"
     restart: unless-stopped
 
@@ -158,7 +162,7 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
       interval: 10s
       timeout: 5s
       retries: 10

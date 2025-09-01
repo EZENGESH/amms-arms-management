@@ -1,64 +1,4 @@
-version: '3.8'
-
 services:
-  # User Service
-  user-service:
-    build:
-      context: ./user-service
-    ports:
-      - "8001:8000"
-    env_file:
-      - ./user-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      db:
-        condition: service_healthy
-    command: >
-      sh -c "until mysql -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      python manage.py collectstatic --noinput &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
-    restart: unless-stopped
-
-  db:
-    image: mysql:8.0
-    ports:
-      - "3307:3306"
-    env_file:
-      - ./user-service/db.env
-    volumes:
-      - user-mysql-data:/var/lib/mysql
-    networks:
-      - backend-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
-  # Inventory Service
-  inventory-service:
-    build:
-      context: ./inventory-service
-    ports:
-      - "8009:8000"
-    env_file:
-      - ./inventory-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      inventory-db:
-        condition: service_healthy
-    command: >
-      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      python manage.py collectstatic --noinput &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
-    restart: unless-stopped
-
   inventory-db:
     image: mysql:8.0
     ports:
@@ -70,9 +10,57 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
       retries: 10
-      start_period: 30s
     restart: unless-stopped
+
+inventory-service:
+  build:
+    context: ./inventory-service
+  ports:
+    - "8009:8000"
+  env_file:
+    - ./inventory-service/.env
+  networks:
+    - backend-network
+  depends_on:
+    inventory-db:
+      condition: service_healthy
+  command: >
+    sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
+    echo 'Waiting for database...'; sleep 2; done &&
+    python manage.py collectstatic --noinput &&
+    gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+  restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: inventory_redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-network
+
+  celery:
+    build:
+      context: .
+    # FIX: Load all environment variables from the .env file
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - inventory-db
+    networks:
+      - backend-network
+
+volumes:
+  inventory-db_data:
+
+networks:
+  backend-network:
+    driver: bridge
