@@ -47,23 +47,21 @@ RUN mkdir -p staticfiles && chown appuser:appgroup staticfiles
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD python manage.py check --deploy || exit 1
 
-# Startup command with better error handling
-CMD bash -c "\
-echo 'Waiting for database...'; \
-counter=0; \
-max_wait=60; \
-while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
-  sleep 1; \
-  counter=\$((counter+1)); \
-  if [ \$counter -ge \$max_wait ]; then \
-    echo 'Error: Database not available after \$max_wait seconds'; \
-    exit 1; \
-  fi; \
-done; \
-echo 'Database is available!'; \
-\
-echo 'Running migrations...'; \
-python manage.py migrate --noinput; \
-\
-echo 'Starting development server...'; \
-exec python manage.py runserver 0.0.0.0:8000
+# Startup command with proper quoting
+CMD ["/bin/bash", "-c", \
+    "echo 'Waiting for database...'; \
+    counter=0; \
+    max_wait=60; \
+    while ! nc -z ${DJANGO_DB_HOST} ${DJANGO_DB_PORT} -w 1; do \
+        sleep 1; \
+        counter=$((counter+1)); \
+        if [ $counter -ge $max_wait ]; then \
+            echo 'Error: Database not available after $max_wait seconds'; \
+            exit 1; \
+        fi; \
+    done; \
+    echo 'Database is available!'; \
+    echo 'Running migrations...'; \
+    python manage.py migrate --noinput; \
+    echo 'Starting development server...'; \
+    exec python manage.py runserver 0.0.0.0:8000"]
