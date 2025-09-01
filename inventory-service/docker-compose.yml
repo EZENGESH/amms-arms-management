@@ -13,7 +13,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # Add this to your .env
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
       - inventory-db_data:/var/lib/mysql
     networks:
