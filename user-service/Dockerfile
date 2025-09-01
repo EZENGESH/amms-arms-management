@@ -28,12 +28,6 @@ RUN mkdir -p /app/logs && \
     touch /app/logs/django.log && \
     chmod 666 /app/logs/django.log
 
-# Create a non-root user and set ownership
-RUN useradd -m -r appuser && \
-    chown -R appuser:appuser /app
-
-USER appuser
-
 # Startup command
 CMD bash -c "echo 'Waiting for database...'; \
 while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
