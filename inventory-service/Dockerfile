@@ -3,9 +3,6 @@ FROM python:3.10-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONFAULTHANDLER=1
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
@@ -30,25 +27,11 @@ RUN pip install --upgrade pip && \
                --no-cache-dir \
                -r requirements.txt
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python manage.py check --deploy || exit 1
+# Copy application files
+COPY . .
 
-# Startup command
-CMD ["/bin/bash", "-c", \
-    "echo 'Waiting for database...'; \
-    counter=0; \
-    max_wait=60; \
-    while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
-        sleep 1; \
-        counter=\$((counter+1)); \
-        if [ \$counter -ge \$max_wait ]; then \
-            echo 'Error: Database not available after \$max_wait seconds'; \
-            exit 1; \
-        fi; \
-    done; \
-    echo 'Database is available!'; \
-    echo 'Running migrations...'; \
-    python manage.py migrate --noinput; \
-    echo 'Starting development server...'; \
-    exec python manage.py runserver 0.0.0.0:8000"]
+# Create directory for static files
+RUN mkdir -p staticfiles
+
+# Simple CMD - Use shell form for simplicity
+CMD python manage.py runserver 0.0.0.0:8000
