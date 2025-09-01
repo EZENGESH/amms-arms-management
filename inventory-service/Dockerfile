@@ -35,12 +35,9 @@ WORKDIR /app
 
 # Install runtime dependencies with retry
 RUN apt-get update && \
-    (apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends \
     libmariadb3 \
-    netcat-openbsd \
-    || apt-get update && apt-get install -y --no-install-recommends \
-    libmariadb3 \
-    netcat-openbsd) \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy from builder
