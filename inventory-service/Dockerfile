@@ -34,15 +34,6 @@ RUN pip install --upgrade pip && \
                --no-cache-dir \
                -r requirements.txt
 
-# Copy application files with proper ownership
-COPY --chown=appuser:appgroup . .
-
-# Change to non-root user
-USER appuser
-
-# Create directory for static files
-RUN mkdir -p staticfiles && chown appuser:appgroup staticfiles
-
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD python manage.py check --deploy || exit 1
