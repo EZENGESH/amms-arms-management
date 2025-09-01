@@ -1,10 +1,15 @@
+version: '3.8'
+
 services:
   inventory-db:
     image: mysql:8.0
     ports:
-      - "3308:3306"  
-    env_file:
-      - ./inventory-service/db.env
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-inventory_db}
+      MYSQL_USER: ${MYSQL_USER:-inventory_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-inventory_password}
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
@@ -20,20 +25,26 @@ services:
     build:
       context: ./inventory-service
     ports:
-    - "8009:8000"
-  env_file:
-    - ./inventory-service/.env
-  networks:
-    - backend-network
-  depends_on:
-    inventory-db:
-      condition: service_healthy
-  command: ["some-command", "with", "arguments"]
-  restart: unless-stopped
+      - "8009:8000"
+    env_file:
+      - ./inventory-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    command: >
+      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      python manage.py collectstatic --noinput &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+    restart: unless-stopped
 
   redis:
     image: redis:alpine
     container_name: inventory_redis
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -41,21 +52,23 @@ services:
       retries: 5
     networks:
       - backend-network
+    restart: unless-stopped
 
   celery:
     build:
-      context: .
-    # FIX: Load all environment variables from the .env file
+      context: ./inventory-service
     env_file:
-      - .env
+      - ./inventory-service/.env
     depends_on:
       - redis
       - inventory-db
     networks:
       - backend-network
+    command: ["celery", "-A", "inventory_service", "worker", "--loglevel=info"]
+    restart: unless-stopped
 
 volumes:
-  inventory-db_data:
+  inventory-mysql-data:
 
 networks:
   backend-network:
