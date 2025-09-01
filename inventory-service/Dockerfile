@@ -30,10 +30,6 @@ RUN pip install --upgrade pip && \
                --no-cache-dir \
                -r requirements.txt
 
-# Create directory for static files and collect static files
-RUN mkdir -p staticfiles && \
-    python manage.py collectstatic --noinput
-
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD python manage.py check --deploy || exit 1
