@@ -1,52 +1,37 @@
 services:
   inventory-db:
     image: mysql:8.0
-    container_name: inventory_db
-    restart: always
-    # FIX: Remove db.env and use variables from the app's .env file
-    env_file:
-      - .env
-    # FIX: Map variables from .env to what the MySQL container expects
-    environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # Add this to your .env
     ports:
       - "3308:3306"
+    env_file:
+      - ./inventory-service/db.env
     volumes:
-      - inventory-db_data:/var/lib/mysql
+      - inventory-mysql-data:/var/lib/mysql
     networks:
       - backend-network
     healthcheck:
-      # FIX: Healthcheck now uses the application user's credentials
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${DB_USER}", "-p$${DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 5s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
 
   inventory-service:
     build:
-      context: .
+      context: ./inventory-service
     ports:
-      - "8002:8000"
-    # FIX: Use a robust startup command with mysql client
-    command: >
-      sh -c "until mysql --ssl-mode=DISABLED -h db -u$$DB_USER -p$$DB_PASSWORD -e 'SELECT 1;' ; do
-        echo 'Waiting for database...'; sleep 2;
-      done &&
-      python manage.py migrate &&
-      gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application"
-    # FIX: Load all environment variables from the .env file
+      - "8009:8000"
     env_file:
-      - .env
-    depends_on:
-      inventory-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - ./inventory-service/.env
     networks:
       - backend-network
+    depends_on:
+      - inventory-db
+    command: >
+      sh -c "until mysql -h inventory-db -u$$MYSQL_USER -p$$MYSQL_PASSWORD -e 'SELECT 1;' ; do
+      echo 'Waiting for database...'; sleep 2; done &&
+      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
+    restart: unless-stopped
 
   redis:
     image: redis:alpine
@@ -67,7 +52,7 @@ services:
       - .env
     depends_on:
       - redis
-      - db
+      - inventory-db
     networks:
       - backend-network
 
