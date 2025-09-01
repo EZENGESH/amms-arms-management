@@ -85,9 +85,13 @@ DATABASES = {
         }
     }
 }
-# ...existing code...
 
-# Add at the BOTTOM of settings.py
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
