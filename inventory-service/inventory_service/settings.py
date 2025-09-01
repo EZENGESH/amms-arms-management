@@ -71,6 +71,7 @@ WSGI_APPLICATION = 'inventory_service.wsgi.application'
 # ...existing code...
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DJANGO_DB_NAME'),
         'USER': config('DJANGO_DB_USER'),
         'PASSWORD': config('DJANGO_DB_PASSWORD'),
@@ -79,6 +80,7 @@ DATABASES = {
         'OPTIONS': {
             'charset': 'utf8mb4',
             'connect_timeout': 30,
+            # Matches db.env plugin
             'auth_plugin': 'mysql_native_password',
         }
     }
