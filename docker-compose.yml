@@ -181,6 +181,10 @@ services:
         condition: service_started
       inventory-service:
         condition: service_started
+      requisition-service:
+        condition: service_started
+      reporting-service:
+        condition: service_started
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
