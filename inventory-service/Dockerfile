@@ -46,11 +46,13 @@ COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Combined command for waiting, migrations, and running Gunicorn
-CMD bash -c \
-    "echo 'Waiting for database...' && \
-    while ! nc -z \$DB_HOST \$DB_PORT; do sleep 2; done && \
-    echo 'Applying migrations...' && \
-    python manage.py makemigrations && \
+CMD bash -c '\
+    echo "Waiting for database connection..." && \
+    until mysql --ssl-mode=DISABLED -h "$DJANGO_DB_HOST" -u "$DJANGO_DB_USER" -p"$DJANGO_DB_PASSWORD" -e "SELECT 1;" ; do \
+        echo "Database unavailable, sleeping..." ; \
+        sleep 2; \
+    done && \
+    echo "Database is up. Applying migrations..." && \
     python manage.py migrate && \
-    echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi.application"
+    echo "Starting Gunicorn server..." && \
+    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 inventory_service.wsgi:application'
