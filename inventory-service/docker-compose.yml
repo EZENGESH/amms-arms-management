@@ -1,20 +1,21 @@
 services:
-  inventory-db:
-    image: mysql:8.0
-    ports:
-      - "3308:3306"
-    env_file:
-      - ./inventory-service/db.env
-    volumes:
-      - inventory-mysql-data:/var/lib/mysql
-    networks:
-      - backend-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    restart: unless-stopped
+inventory-db:
+  image: mysql:8.0
+  ports:
+    - "3308:3306"
+  env_file:
+    - ./inventory-service/db.env
+  volumes:
+    - inventory-mysql-data:/var/lib/mysql
+  networks:
+    - backend-network
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+    start_period: 30s
+  restart: unless-stopped
 
 inventory-service:
   build:
