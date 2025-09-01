@@ -6,9 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install system dependencies including pkg-config and build tools
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    pkg-config \
+    default-libmysqlclient-dev \
+    gcc \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
