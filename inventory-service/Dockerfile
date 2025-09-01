@@ -7,9 +7,13 @@ ENV PYTHONFAULTHANDLER=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
 
+# Create a non-root user
+RUN addgroup --system --gid 1000 appgroup && \
+    adduser --system --uid 1000 --gid 1000 appuser
+
 WORKDIR /app
 
-# Install system dependencies including pkg-config and build tools
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     pkg-config \
@@ -22,9 +26,7 @@ RUN apt-get update && \
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-RUN python manage.py collectstatic --noinput
-
-# Install Python dependencies with trusted hosts and retry options
+# Install Python dependencies
 RUN pip install --upgrade pip && \
     pip install --trusted-host pypi.org \
                --trusted-host pypi.python.org \
@@ -32,20 +34,30 @@ RUN pip install --upgrade pip && \
                --no-cache-dir \
                -r requirements.txt
 
+# Copy application files with proper ownership
+COPY --chown=appuser:appgroup . .
+
+# Change to non-root user
+USER appuser
+
+# Create directory for static files and collect static files
+RUN mkdir -p staticfiles && \
+    python manage.py collectstatic --noinput
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD python manage.py check --deploy || exit 1
 
-# Startup command with proper quoting
+# Startup command
 CMD ["/bin/bash", "-c", \
     "echo 'Waiting for database...'; \
     counter=0; \
     max_wait=60; \
-    while ! nc -z ${DJANGO_DB_HOST} ${DJANGO_DB_PORT} -w 1; do \
+    while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
         sleep 1; \
-        counter=$((counter+1)); \
-        if [ $counter -ge $max_wait ]; then \
-            echo 'Error: Database not available after $max_wait seconds'; \
+        counter=\$((counter+1)); \
+        if [ \$counter -ge \$max_wait ]; then \
+            echo 'Error: Database not available after \$max_wait seconds'; \
             exit 1; \
         fi; \
     done; \
