@@ -1,5 +1,5 @@
 services:
-  db:
+  inventory-db:
     image: mysql:8.0
     container_name: inventory_db
     restart: always
