@@ -7,10 +7,6 @@ ENV PYTHONFAULTHANDLER=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
 
-# Create a non-root user
-RUN addgroup --system --gid 1000 appgroup && \
-    adduser --system --uid 1000 --gid 1000 appuser
-
 WORKDIR /app
 
 # Install system dependencies
@@ -33,12 +29,6 @@ RUN pip install --upgrade pip && \
                --trusted-host files.pythonhosted.org \
                --no-cache-dir \
                -r requirements.txt
-
-# Copy application files with proper ownership
-COPY --chown=appuser:appgroup . .
-
-# Change to non-root user
-USER appuser
 
 # Create directory for static files and collect static files
 RUN mkdir -p staticfiles && \
