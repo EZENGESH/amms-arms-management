@@ -7,7 +7,7 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      db:
+      user-db:
         condition: service_healthy
       redis:
         condition: service_started
@@ -15,9 +15,9 @@ services:
       - .:/app
       - staticfiles:/app/staticfiles
 
-  db:
+  user-db:
     image: mysql:8.0
-    container_name: db
+    container_name: user-db
     restart: always
     env_file:
       - db.env
@@ -47,7 +47,7 @@ services:
       - .env
     command: celery -A user_service worker --loglevel=info
     depends_on:
-      db:
+      user-db:
         condition: service_healthy
       redis:
         condition: service_started
@@ -61,7 +61,7 @@ services:
       - .env
     command: celery -A user_service beat --loglevel=info
     depends_on:
-      db:
+      user-db:
         condition: service_healthy
       redis:
         condition: service_started
