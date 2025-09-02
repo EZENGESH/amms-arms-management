@@ -1,32 +1,18 @@
 import axios from "axios";
 
-// Detect if we're running inside Docker
-const isDocker = window.location.hostname !== "localhost";
+// Base URLs for local development
+const USER_API_BASE_URL = "http://localhost:8001";
+const INVENTORY_API_BASE_URL = "http://localhost:8009";
+const REQUISITION_API_BASE_URL = "http://localhost:8003";
+const FIREARM_LOG_API_BASE_URL = "http://localhost:8009";
 
-// Base URLs for services (root of each service)
-const USER_API_BASE_URL = isDocker
-  ? "http://user-service:8000"
-  : "http://localhost:8001";
-
-const INVENTORY_API_BASE_URL = isDocker
-  ? "http://inventory-service:8000"
-  : "http://localhost:8009";
-
-const REQUISITION_API_BASE_URL = isDocker
-  ? "http://requisition-service:8000"
-  : "http://localhost:8003";
-
-const FIREARM_LOG_API_BASE_URL = isDocker
-  ? "http://inventory-service:8000"
-  : "http://localhost:8009";
-
-// Axios instances
-const api = axios.create({ baseURL: USER_API_BASE_URL, headers: { "Content-Type": "application/json" } });
-const inventoryApi = axios.create({ baseURL: INVENTORY_API_BASE_URL, headers: { "Content-Type": "application/json" } });
-const logfirearmapi = axios.create({ baseURL: FIREARM_LOG_API_BASE_URL, headers: { "Content-Type": "application/json" } });
+// Create Axios instances
+const api = axios.create({ baseURL: USER_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
+const inventoryApi = axios.create({ baseURL: INVENTORY_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
 const requisitionApi = axios.create({ baseURL: REQUISITION_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
+const logfirearmapi = axios.create({ baseURL: FIREARM_LOG_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
 
-// Token refresh function
+// Refresh token function
 async function refreshToken() {
   const refresh = localStorage.getItem("refresh_token");
   if (!refresh) {
@@ -36,7 +22,7 @@ async function refreshToken() {
   }
 
   try {
-    const response = await axios.post(`${USER_API_BASE_URL}/api/token/refresh/`, { refresh });
+    const response = await axios.post(`${USER_API_BASE_URL}/api/auth/token/refresh/`, { refresh });
     const newAccessToken = response.data.access;
     localStorage.setItem("access_token", newAccessToken);
     return { access: newAccessToken };
@@ -49,18 +35,18 @@ async function refreshToken() {
   }
 }
 
-// Request interceptor to attach access token
-const addTokenInterceptor = (apiInstance) => {
-  apiInstance.interceptors.request.use((config) => {
+// Attach token to requests
+const addTokenInterceptor = (instance) => {
+  instance.interceptors.request.use((config) => {
     const token = localStorage.getItem("access_token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
 };
 
-// Response interceptor for refreshing token
-const addRefreshTokenInterceptor = (apiInstance) => {
-  apiInstance.interceptors.response.use(
+// Handle 401 by refreshing token
+const addRefreshInterceptor = (instance) => {
+  instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
@@ -69,9 +55,9 @@ const addRefreshTokenInterceptor = (apiInstance) => {
         try {
           const newToken = await refreshToken();
           originalRequest.headers.Authorization = `Bearer ${newToken.access}`;
-          return apiInstance(originalRequest);
+          return instance(originalRequest);
         } catch (err) {
-          console.error("Refresh token failed:", err);
+          console.error("Token refresh failed:", err);
         }
       }
       return Promise.reject(error);
@@ -79,33 +65,36 @@ const addRefreshTokenInterceptor = (apiInstance) => {
   );
 };
 
-// Generic error handling interceptor
-const addErrorHandlingInterceptor = (apiInstance, serviceName) => {
-  apiInstance.interceptors.response.use(
+// Generic error handling
+const addErrorHandlingInterceptor = (instance, serviceName) => {
+  instance.interceptors.response.use(
     (response) => response,
     (error) => {
-      console.error(`${serviceName} API Error:`, error);
-      if (error.code === "ECONNABORTED") error.message = `Request to ${serviceName} service timed out`;
-      else if (!error.response) error.message = `${serviceName} service is not responding`;
-      else if (error.response.status === 502 || error.response.status === 503)
-        error.message = `${serviceName} service is temporarily unavailable`;
-      else if (error.response.status === 404) error.message = `${serviceName} endpoint not found`;
+      if (!error.response) {
+        console.error(`${serviceName} service not responding:`, error.message);
+      } else if (error.response.status === 404) {
+        console.error(`${serviceName} endpoint not found:`, error.config.url);
+      } else if ([502, 503].includes(error.response.status)) {
+        console.error(`${serviceName} service temporarily unavailable`);
+      } else {
+        console.error(`${serviceName} API Error:`, error.response.status, error.response.data);
+      }
       return Promise.reject(error);
     }
   );
 };
 
-// Apply interceptors to all instances
-[api, inventoryApi, logfirearmapi, requisitionApi].forEach((instance) => {
+// Apply interceptors
+[api, inventoryApi, requisitionApi, logfirearmapi].forEach((instance) => {
   addTokenInterceptor(instance);
-  addRefreshTokenInterceptor(instance);
+  addRefreshInterceptor(instance);
 });
 
 addErrorHandlingInterceptor(api, "User");
 addErrorHandlingInterceptor(inventoryApi, "Inventory");
-addErrorHandlingInterceptor(logfirearmapi, "Firearm Log");
 addErrorHandlingInterceptor(requisitionApi, "Requisition");
+addErrorHandlingInterceptor(logfirearmapi, "Firearm Log");
 
 // Exports
-export { api, inventoryApi, logfirearmapi, requisitionApi };
+export { api, inventoryApi, requisitionApi, logfirearmapi };
 export default api;
