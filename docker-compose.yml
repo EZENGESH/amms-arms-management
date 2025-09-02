@@ -20,21 +20,21 @@ user-service:
     - backend
   restart: always
 
-  user-db:
-    image: mysql:8.0
-    container_name: user-db
-    env_file:
-      - ./user-service/db.env
-    volumes:
-      - user-mysql-data:/var/lib/mysql
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+user-db:
+  image: mysql:8.0
+  container_name: user-db
+  env_file:
+    - ./user-service/db.env
+  volumes:
+    - user-mysql-data:/var/lib/mysql
+  networks:
+    - backend
+  restart: always
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
 
   # ========================
   # Inventory Service
