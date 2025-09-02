@@ -45,20 +45,18 @@ COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/pytho
 ENV PYTHONPATH=/app
 ENV DJANGO_SETTINGS_MODULE=requisition_service.settings
 
-# Non-root user
-RUN useradd -m appuser && \
-    chown -R appuser:appuser /app
-USER appuser
 
 # CMD: wait for DB, run migrations, then start server
-CMD bash -c "\
-    echo 'Waiting for database...' && \
-    until mysql -h \$DJANGO_DB_HOST -u\$DJANGO_DB_USER -p\$DJANGO_DB_PASSWORD -e 'SELECT 1;' > /dev/null 2>&1; do \
+CMD bash -c \
+    "echo 'Waiting for database...' && \
+    until mysql -h \$DJANGO_DB_HOST -u\$DJANGO_DB_USER -p\$DJANGO_DB_PASSWORD -e 'SELECT 1;'; do \
       echo 'Waiting for database...'; sleep 5; \
     done && \
     echo 'Applying migrations...' && \
+    python manage.py makemigrations && \
     python manage.py migrate && \
     echo 'Collecting static files...' && \
     python manage.py collectstatic --noinput && \
     echo 'Starting server...' && \
     exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 requisition_service.wsgi:application"
+
