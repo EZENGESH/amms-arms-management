@@ -1,40 +1,46 @@
-user-service:
-  build: ./user-service
-  container_name: user-service
-  env_file:
-    - ./user-service/.env   # <---- use this instead of db.env
-  command: >
-    sh -c "
-      python manage.py migrate &&
-      python manage.py collectstatic --noinput &&
-      gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
-  volumes:
-    - ./user-service:/app
-    - staticfiles:/app/staticfiles
-  depends_on:
-    user-db:
-      condition: service_healthy
-    redis:
-      condition: service_started
-  networks:
-    - backend
-  restart: always
+version: "3.9"
 
-user-db:
-  image: mysql:8.0
-  container_name: user-db
-  env_file:
-    - ./user-service/db.env
-  volumes:
-    - user-mysql-data:/var/lib/mysql
-  networks:
-    - backend
-  restart: always
-  healthcheck:
-    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
+services:
+  # ========================
+  # User Service
+  # ========================
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    env_file:
+      - ./user-service/.env   # using .env instead of db.env
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    volumes:
+      - ./user-service:/app
+      - staticfiles:/app/staticfiles
+    depends_on:
+      user-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - backend
+    restart: always
+
+  user-db:
+    image: mysql:8.0
+    container_name: user-db
+    env_file:
+      - ./user-service/db.env
+    volumes:
+      - user-mysql-data:/var/lib/mysql
+    networks:
+      - backend
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ========================
   # Inventory Service
@@ -61,8 +67,10 @@ user-db:
       - ./inventory-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - inventory-db
-      - redis
+      inventory-db:
+        condition: service_started
+      redis:
+        condition: service_started
     networks:
       - backend
     restart: always
@@ -103,8 +111,10 @@ user-db:
       - ./requisition-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - requisition-db
-      - redis
+      requisition-db:
+        condition: service_started
+      redis:
+        condition: service_started
     networks:
       - backend
     restart: always
@@ -145,8 +155,10 @@ user-db:
       - ./reporting-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - reporting-db
-      - redis
+      reporting-db:
+        condition: service_started
+      redis:
+        condition: service_started
     networks:
       - backend
     restart: always
