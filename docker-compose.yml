@@ -103,14 +103,17 @@ services:
       DB_PORT: 3306
     command: >
       sh -c "
-        until nc -z requisition-db 3306;
+        echo 'Waiting for requisition-db...' &&
+        until mysqladmin ping -h requisition-db -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD --silent;
         do
           echo 'Waiting for requisition-db...';
           sleep 2;
         done;
+        echo 'DB is ready!' &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+
     volumes:
       - ./requisition-service:/app
       - staticfiles:/app/staticfiles
