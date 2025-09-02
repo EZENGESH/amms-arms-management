@@ -14,11 +14,6 @@ services:
       DB_PORT: 3306
     command: >
       sh -c "
-        until nc -z user-db 3306;
-        do
-          echo 'Waiting for user-db...';
-          sleep 2;
-        done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
@@ -26,8 +21,10 @@ services:
       - ./user-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - user-db
-      - redis
+      user-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - backend
     restart: always
@@ -42,6 +39,11 @@ services:
     networks:
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ========================
   # Inventory Service
