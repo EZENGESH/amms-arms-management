@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ========================
   # User Service
@@ -17,10 +15,8 @@ services:
       - ./user-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - db
+      - redis
     networks:
       - backend
     healthcheck:
@@ -62,10 +58,8 @@ services:
       - ./inventory-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      inventory-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - inventory-db
+      - redis
     networks:
       - backend
     healthcheck:
@@ -107,10 +101,8 @@ services:
       - ./requisition-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      requisition-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - requisition-db
+      - redis
     networks:
       - backend
     healthcheck:
@@ -152,10 +144,8 @@ services:
       - ./reporting-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      reporting-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - reporting-db
+      - redis
     networks:
       - backend
     healthcheck:
@@ -205,14 +195,10 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      user-service:
-        condition: service_healthy
-      inventory-service:
-        condition: service_healthy
-      requisition-service:
-        condition: service_healthy
-      reporting-service:
-        condition: service_healthy
+      - user-service
+      - inventory-service
+      - requisition-service
+      - reporting-service
     networks:
       - backend
     restart: always
@@ -226,8 +212,7 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      api-gateway:
-        condition: service_healthy
+      - api-gateway
     networks:
       - backend
     restart: always
