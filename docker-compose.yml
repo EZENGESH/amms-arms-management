@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   # ========================
   # User Service
@@ -7,6 +9,9 @@ services:
     container_name: user-service
     env_file:
       - ./user-service/db.env
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
@@ -31,13 +36,18 @@ services:
     container_name: db
     env_file:
       - ./user-service/db.env
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: user_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,6 +60,9 @@ services:
     container_name: inventory-service
     env_file:
       - ./inventory-service/db.env
+    environment:
+      - DB_HOST=inventory-db
+      - DB_PORT=3306
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
@@ -74,13 +87,18 @@ services:
     container_name: inventory-db
     env_file:
       - ./inventory-service/db.env
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: inventory_db
+      MYSQL_USER: inventory
+      MYSQL_PASSWORD: inventorypassword
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -93,6 +111,9 @@ services:
     container_name: requisition-service
     env_file:
       - ./requisition-service/db.env
+    environment:
+      - DB_HOST=requisition-db
+      - DB_PORT=3306
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
@@ -117,13 +138,18 @@ services:
     container_name: requisition-db
     env_file:
       - ./requisition-service/db.env
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: requisition_db
+      MYSQL_USER: requisition
+      MYSQL_PASSWORD: requisitionpassword
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -136,6 +162,9 @@ services:
     container_name: reporting-service
     env_file:
       - ./reporting-service/db.env
+    environment:
+      - DB_HOST=reporting-db
+      - DB_PORT=3306
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
@@ -160,13 +189,18 @@ services:
     container_name: reporting-db
     env_file:
       - ./reporting-service/db.env
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: reporting_db
+      MYSQL_USER: reporting
+      MYSQL_PASSWORD: reportingpassword
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
