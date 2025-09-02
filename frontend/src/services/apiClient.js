@@ -1,56 +1,70 @@
 // src/services/apiClient.js
-import axios from 'axios';
+import axios from "axios";
 
 // Define base URLs for different microservices
-const USER_API_BASE_URL = 'http://localhost:8001'; // User registration service
-const INVENTORY_API_BASE_URL = 'http://localhost:8009/api';
-const REQUISITION_API_BASE_URL = 'http://localhost:8003/api'; // <-- Add your requisition service base URL
+const USER_API_BASE_URL = "http://localhost:8001"; // User registration service
+const INVENTORY_API_BASE_URL = "http://localhost:8009/api";
+const REQUISITION_API_BASE_URL = "http://localhost:8003/api"; // Requisition service base URL
 
-// Create Axios instance for User service
+// Create Axios instances
 const api = axios.create({
   baseURL: USER_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-// Create Axios instance for Inventory service
 const inventoryApi = axios.create({
   baseURL: INVENTORY_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 const logfirearmapi = axios.create({
-  baseURL: 'http://localhost:8009/api/',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: "http://localhost:8009/api/",
+  headers: { "Content-Type": "application/json" },
 });
 
-// Create Axios instance for Requisition service
 const requisitionApi = axios.create({
   baseURL: REQUISITION_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { "Content-Type": "application/json" },
   timeout: 10000,
 });
 
-// Function to refresh token (assumed to be implemented elsewhere)
+//
+// 🔑 Token Refresh Logic (for DRF SimpleJWT)
+//
 async function refreshToken() {
-  // Implement your token refresh logic here
-  // This is a placeholder, replace with your actual implementation
-  console.warn('refreshToken() function needs to be implemented');
-  return Promise.resolve({ access: 'new_access_token' });
+  const refresh = localStorage.getItem("refresh_token");
+
+  if (!refresh) {
+    console.warn("No refresh token found. Redirecting to login.");
+    window.location.href = "/login";
+    return Promise.reject("No refresh token");
+  }
+
+  try {
+    const response = await axios.post(`${USER_API_BASE_URL}/api/token/refresh/`, {
+      refresh: refresh,
+    });
+
+    const newAccessToken = response.data.access;
+    localStorage.setItem("access_token", newAccessToken);
+
+    return { access: newAccessToken };
+  } catch (error) {
+    console.error("Failed to refresh token:", error);
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    window.location.href = "/login";
+    throw error;
+  }
 }
 
-// Add interceptor for adding token to request
+//
+// 🔒 Attach access token to requests
+//
 const addTokenInterceptor = (apiInstance) => {
   apiInstance.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -60,7 +74,9 @@ const addTokenInterceptor = (apiInstance) => {
   );
 };
 
-// Add interceptor for handling token refresh
+//
+// 🔄 Refresh token on 401
+//
 const addRefreshTokenInterceptor = (apiInstance) => {
   apiInstance.interceptors.response.use(
     (response) => response,
@@ -72,12 +88,10 @@ const addRefreshTokenInterceptor = (apiInstance) => {
 
         try {
           const newToken = await refreshToken();
-          localStorage.setItem('access_token', newToken.access);
           originalRequest.headers.Authorization = `Bearer ${newToken.access}`;
-          return apiInstance(originalRequest); // Use the correct instance
+          return apiInstance(originalRequest); // retry request
         } catch (err) {
-          console.error('Refresh token failed:', err);
-          window.location.href = '/login';
+          console.error("Refresh token failed:", err);
         }
       }
 
@@ -86,14 +100,16 @@ const addRefreshTokenInterceptor = (apiInstance) => {
   );
 };
 
-// Add this function to your apiClient.js
+//
+// ⚠️ Error handling interceptor
+//
 const addErrorHandlingInterceptor = (apiInstance, serviceName) => {
   apiInstance.interceptors.response.use(
     (response) => response,
     (error) => {
       console.error(`${serviceName} API Error:`, error);
 
-      if (error.code === 'ECONNABORTED') {
+      if (error.code === "ECONNABORTED") {
         error.message = `Request to ${serviceName} service timed out`;
       } else if (!error.response) {
         error.message = `${serviceName} service is not responding`;
@@ -108,22 +124,17 @@ const addErrorHandlingInterceptor = (apiInstance, serviceName) => {
   );
 };
 
-// Apply the error handling interceptor to each instance
-addErrorHandlingInterceptor(api, 'User');
-addErrorHandlingInterceptor(inventoryApi, 'Inventory');
-addErrorHandlingInterceptor(logfirearmapi, 'Firearm Log');
-addErrorHandlingInterceptor(requisitionApi, 'Requisition');
+// Apply interceptors
+[api, inventoryApi, logfirearmapi, requisitionApi].forEach((instance) => {
+  addTokenInterceptor(instance);
+  addRefreshTokenInterceptor(instance);
+});
 
-// Apply interceptors to all instances
-addTokenInterceptor(api);
-addRefreshTokenInterceptor(api);
-addTokenInterceptor(inventoryApi);
-addRefreshTokenInterceptor(inventoryApi);
-addTokenInterceptor(logfirearmapi);
-addRefreshTokenInterceptor(logfirearmapi);
-addTokenInterceptor(requisitionApi);
-addRefreshTokenInterceptor(requisitionApi);
+addErrorHandlingInterceptor(api, "User");
+addErrorHandlingInterceptor(inventoryApi, "Inventory");
+addErrorHandlingInterceptor(logfirearmapi, "Firearm Log");
+addErrorHandlingInterceptor(requisitionApi, "Requisition");
 
-// Export the instances
+// Export instances
 export { api, inventoryApi, logfirearmapi, requisitionApi };
-export default api; // Default export remains the same
+export default api; // Default export = User API
