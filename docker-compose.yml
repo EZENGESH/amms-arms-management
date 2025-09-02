@@ -56,11 +56,12 @@ services:
       - ./inventory-service/.env
     command: >
       sh -c "
-        until nc -z inventory-db 3306;
-        do echo 'Waiting for inventory-db...'; sleep 2; done;
+        until nc -z requisition-db 3306;
+        do echo 'Waiting for requisition-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+        gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+
     volumes:
       - ./inventory-service:/app
       - staticfiles:/app/staticfiles
