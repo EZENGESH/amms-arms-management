@@ -17,8 +17,10 @@ services:
       - ./user-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - backend
     healthcheck:
@@ -60,8 +62,10 @@ services:
       - ./inventory-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - inventory-db
-      - redis
+      inventory-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - backend
     healthcheck:
@@ -103,8 +107,10 @@ services:
       - ./requisition-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - requisition-db
-      - redis
+      requisition-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - backend
     healthcheck:
@@ -146,8 +152,10 @@ services:
       - ./reporting-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - reporting-db
-      - redis
+      reporting-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - backend
     healthcheck:
@@ -197,10 +205,14 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - user-service
-      - inventory-service
-      - requisition-service
-      - reporting-service
+      user-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      requisition-service:
+        condition: service_healthy
+      reporting-service:
+        condition: service_healthy
     networks:
       - backend
     restart: always
@@ -214,7 +226,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
     networks:
       - backend
     restart: always
