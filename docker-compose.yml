@@ -48,6 +48,8 @@ services:
   inventory-service:
     build: ./inventory-service
     container_name: inventory-service
+    ports:
+      - "8009:8000"
     env_file:
       - ./inventory-service/db.env
     environment:
