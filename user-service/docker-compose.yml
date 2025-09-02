@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   user-service:
     build: .
@@ -17,11 +19,8 @@ services:
     image: mysql:8.0
     container_name: db
     restart: always
-    environment:
-      MYSQL_DATABASE: ${DJANGO_DB_NAME}
-      MYSQL_USER: ${DJANGO_DB_USER}
-      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DJANGO_DB_ROOT_PASSWORD}
+    env_file:
+      - db.env
     ports:
       - "3311:3306"
     volumes:
