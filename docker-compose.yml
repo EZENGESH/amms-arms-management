@@ -140,6 +140,8 @@ services:
   reporting-service:
     build: ./reporting-service
     container_name: reporting-service
+    ports:
+      - "8010:8000"
     env_file:
       - ./reporting-service/db.env
     environment:
