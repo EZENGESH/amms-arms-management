@@ -13,17 +13,20 @@ services:
       - .:/app
       - staticfiles:/app/staticfiles
 
-  image: mysql:8.0
-  restart: always
-  environment:
-    MYSQL_DATABASE: ${DJANGO_DB_NAME}
-    MYSQL_USER: ${DJANGO_DB_USER}
-    MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
-    MYSQL_ROOT_PASSWORD: ${DJANGO_DB_ROOT_PASSWORD}
-  ports:
-    - "3311:3306"
-  volumes:
-    - user-mysql-data:/var/lib/mysql
+  db:
+    image: mysql:8.0
+    container_name: db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DJANGO_DB_NAME}
+      MYSQL_USER: ${DJANGO_DB_USER}
+      MYSQL_PASSWORD: ${DJANGO_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DJANGO_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE_HOST: ${DJANGO_DB_HOST}
+    ports:
+      - "3311:3306"
+    volumes:
+      - user-mysql-data:/var/lib/mysql
 
   redis:
     image: redis:7-alpine

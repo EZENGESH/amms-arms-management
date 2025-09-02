@@ -90,19 +90,13 @@ WSGI_APPLICATION = 'user_service.wsgi.application'
 # DATABASE
 # ========================
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DJANGO_DB_NAME'),
-        'USER': config('DJANGO_DB_USER'),
-        'PASSWORD': config('DJANGO_DB_PASSWORD'),
-        'HOST': config('DJANGO_DB_HOST', default='localhost'),
-        'PORT': config('DJANGO_DB_PORT', default='3306'),
-        'OPTIONS': {
-            'connect_timeout': 30,
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
-        'CONN_MAX_AGE': 300,  # Persistent connections
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("DJANGO_DB_NAME"),
+        "USER": os.getenv("DJANGO_DB_USER"),
+        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD"),
+        "HOST": os.getenv("DJANGO_DB_HOST", "db"),
+        "PORT": os.getenv("DJANGO_DB_PORT", "3306"),
     }
 }
 
