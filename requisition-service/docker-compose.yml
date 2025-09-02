@@ -19,7 +19,7 @@ services:
              echo 'Starting Gunicorn...' &&
              gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     depends_on:
-      db:
+      requisition-db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -52,12 +52,12 @@ services:
     command: celery -A requisition_service worker --loglevel=info --concurrency=4
     depends_on:
       - redis
-      - db
+      - requisition-db
     networks:
       - backend-network
 
   # MySQL Database for Requisition Service
-  db:
+  requisition-db:
     image: mysql:8.0
     container_name: requisition-db
     restart: unless-stopped
