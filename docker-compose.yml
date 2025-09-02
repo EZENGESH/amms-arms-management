@@ -30,7 +30,7 @@ services:
     image: mysql:8.0
     container_name: user-db
     env_file:
-      - ./user-service/.env
+      - ./user-service/db.env
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
