@@ -10,47 +10,38 @@ services:
     env_file:
       - ./user-service/db.env
     environment:
-      - DB_HOST=db
-      - DB_PORT=3306
+      DB_HOST: user-db
+      DB_PORT: 3306
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+      sh -c "
+        until nc -z user-db 3306;
+        do
+          echo 'Waiting for user-db...';
+          sleep 2;
+        done;
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
       - ./user-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - db
+      - user-db
       - redis
     networks:
       - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: always
 
-  db:
+  user-db:
     image: mysql:8.0
-    container_name: db
+    container_name: user-db
     env_file:
       - ./user-service/db.env
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: user_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: userpassword
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ========================
   # Inventory Service
@@ -61,12 +52,18 @@ services:
     env_file:
       - ./inventory-service/db.env
     environment:
-      - DB_HOST=inventory-db
-      - DB_PORT=3306
+      DB_HOST: inventory-db
+      DB_PORT: 3306
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+      sh -c "
+        until nc -z inventory-db 3306;
+        do
+          echo 'Waiting for inventory-db...';
+          sleep 2;
+        done;
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
       - ./inventory-service:/app
       - staticfiles:/app/staticfiles
@@ -75,11 +72,6 @@ services:
       - redis
     networks:
       - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: always
 
   inventory-db:
@@ -87,21 +79,11 @@ services:
     container_name: inventory-db
     env_file:
       - ./inventory-service/db.env
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: inventory_db
-      MYSQL_USER: inventory
-      MYSQL_PASSWORD: inventorypassword
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ========================
   # Requisition Service
@@ -112,12 +94,18 @@ services:
     env_file:
       - ./requisition-service/db.env
     environment:
-      - DB_HOST=requisition-db
-      - DB_PORT=3306
+      DB_HOST: requisition-db
+      DB_PORT: 3306
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+      sh -c "
+        until nc -z requisition-db 3306;
+        do
+          echo 'Waiting for requisition-db...';
+          sleep 2;
+        done;
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
       - ./requisition-service:/app
       - staticfiles:/app/staticfiles
@@ -126,11 +114,6 @@ services:
       - redis
     networks:
       - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: always
 
   requisition-db:
@@ -138,21 +121,11 @@ services:
     container_name: requisition-db
     env_file:
       - ./requisition-service/db.env
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: requisition_db
-      MYSQL_USER: requisition
-      MYSQL_PASSWORD: requisitionpassword
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ========================
   # Reporting Service
@@ -163,12 +136,18 @@ services:
     env_file:
       - ./reporting-service/db.env
     environment:
-      - DB_HOST=reporting-db
-      - DB_PORT=3306
+      DB_HOST: reporting-db
+      DB_PORT: 3306
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+      sh -c "
+        until nc -z reporting-db 3306;
+        do
+          echo 'Waiting for reporting-db...';
+          sleep 2;
+        done;
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
       - ./reporting-service:/app
       - staticfiles:/app/staticfiles
@@ -177,11 +156,6 @@ services:
       - redis
     networks:
       - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: always
 
   reporting-db:
@@ -189,21 +163,11 @@ services:
     container_name: reporting-db
     env_file:
       - ./reporting-service/db.env
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: reporting_db
-      MYSQL_USER: reporting
-      MYSQL_PASSWORD: reportingpassword
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ========================
   # Shared Dependencies
@@ -214,11 +178,6 @@ services:
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ========================
   # API Gateway
