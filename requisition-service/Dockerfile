@@ -32,7 +32,7 @@ WORKDIR /app
 # Runtime dependencies only
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    netcat \
+    netcat-openbsd \
     libmariadb3 \
     default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
