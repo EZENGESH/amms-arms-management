@@ -36,6 +36,7 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    netcat \
     libmariadb3 \
     default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
