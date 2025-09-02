@@ -12,7 +12,7 @@ export const FIREARM_TYPES = [
 // Service Health
 export const checkInventoryServiceHealth = async () => {
   try {
-    await inventoryApi.get('/health/');
+    await inventoryApi.get('api/health/');
     return { isHealthy: true, error: null };
   } catch (error) {
     return { isHealthy: false, error: error.message };
@@ -22,7 +22,7 @@ export const checkInventoryServiceHealth = async () => {
 // CRUD Operations
 export const getInventory = async (options = {}) => {
   try {
-    const response = await inventoryApi.get('/arms/', { params: options });
+    const response = await inventoryApi.get('api/arms/', { params: options });
     // Fix: Use .results if paginated, else fallback to array
     if (Array.isArray(response.data)) {
       return response.data;
@@ -38,7 +38,7 @@ export const getInventory = async (options = {}) => {
 
 export const getInventoryDashboard = async () => {
   try {
-    const response = await inventoryApi.get('/arms/dashboard/');
+    const response = await inventoryApi.get('api/arms/dashboard/');
     return {
       summary: response.data?.summary || { total_firearms: 0 },
       type_statistics: Array.isArray(response.data?.type_statistics)
@@ -75,7 +75,7 @@ export const addFirearm = async (firearmData) => {
 
 export const searchInventory = async (query) => {
   try {
-    const response = await inventoryApi.get('/arms/search/', {
+    const response = await inventoryApi.get('api/arms/search/', {
       params: { q: query }
     });
     // Fix: Handle paginated response
