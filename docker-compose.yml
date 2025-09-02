@@ -1,238 +1,232 @@
 services:
+  # ========================
   # User Service
+  # ========================
   user-service:
-    build:
-      context: ./user-service
-    ports:
-      - "8001:8000"
+    build: ./user-service
+    container_name: user-service
     env_file:
-      - ./user-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      db:
-        condition: service_healthy
+      - ./user-service/db.env
     command: >
-      sh -c "until mysql -h db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      python manage.py collectstatic --noinput &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 user_service.wsgi:application"
-    restart: unless-stopped
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    volumes:
+      - ./user-service:/app
+      - staticfiles:/app/staticfiles
+    depends_on:
+      - user-db
+      - redis
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
-  db:
+  user-db:
     image: mysql:8.0
-    ports:
-      - "3307:3306"
+    container_name: user-db
     env_file:
       - ./user-service/db.env
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
-      - backend-network
+      - backend
+    restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
+      retries: 5
 
-  user-celery:
-    build:
-      context: ./user-service
-    command: celery -A user_service worker --loglevel=info --concurrency=4
-    depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    env_file:
-      - ./user-service/.env
-    networks:
-      - backend-network
-    restart: unless-stopped
-
+  # ========================
   # Inventory Service
+  # ========================
   inventory-service:
-    build:
-      context: ./inventory-service
-    ports:
-      - "8009:8000"
+    build: ./inventory-service
+    container_name: inventory-service
     env_file:
-      - ./inventory-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      inventory-db:
-        condition: service_healthy
+      - ./inventory-service/db.env
     command: >
-      sh -c "until mysql -h inventory-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      python manage.py collectstatic --noinput &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 inventory_service.wsgi:application"
-    restart: unless-stopped
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    volumes:
+      - ./inventory-service:/app
+      - staticfiles:/app/staticfiles
+    depends_on:
+      - inventory-db
+      - redis
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   inventory-db:
     image: mysql:8.0
-    ports:
-      - "3308:3306"
+    container_name: inventory-db
     env_file:
       - ./inventory-service/db.env
     volumes:
       - inventory-mysql-data:/var/lib/mysql
     networks:
-      - backend-network
+      - backend
+    restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
+      retries: 5
 
+  # ========================
   # Requisition Service
+  # ========================
   requisition-service:
-    build:
-      context: ./requisition-service
-    ports:
-      - "8003:8000"
+    build: ./requisition-service
+    container_name: requisition-service
     env_file:
-      - ./requisition-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      requisition-db:
-        condition: service_healthy
+      - ./requisition-service/db.env
     command: >
-      sh -c "until mysql -h requisition-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      python manage.py migrate &&
-      python manage.py collectstatic --noinput &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 requisition_service.wsgi:application"
-    restart: unless-stopped
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    volumes:
+      - ./requisition-service:/app
+      - staticfiles:/app/staticfiles
+    depends_on:
+      - requisition-db
+      - redis
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   requisition-db:
     image: mysql:8.0
-    ports:
-      - "3309:3306"
+    container_name: requisition-db
     env_file:
       - ./requisition-service/db.env
     volumes:
       - requisition-mysql-data:/var/lib/mysql
     networks:
-      - backend-network
+      - backend
+    restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
+      retries: 5
 
+  # ========================
   # Reporting Service
+  # ========================
   reporting-service:
-    build:
-      context: ./reporting-service
-    ports:
-      - "8004:8000"
+    build: ./reporting-service
+    container_name: reporting-service
     env_file:
-      - ./reporting-service/.env
-    networks:
-      - backend-network
-    depends_on:
-      reporting-db:
-        condition: service_healthy
+      - ./reporting-service/db.env
     command: >
-      sh -c "until mysql -h reporting-db -u$$DJANGO_DB_USER -p$$DJANGO_DB_PASSWORD --ssl-mode=DISABLED -e 'SELECT 1;' ; do
-      echo 'Waiting for database...'; sleep 2; done &&
-      python manage.py collectstatic --noinput &&
-      gunicorn --bind 0.0.0.0:8000 --workers 4 reporting_service.wsgi:application"
-    restart: unless-stopped
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    volumes:
+      - ./reporting-service:/app
+      - staticfiles:/app/staticfiles
+    depends_on:
+      - reporting-db
+      - redis
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   reporting-db:
     image: mysql:8.0
-    ports:
-      - "3310:3306"
+    container_name: reporting-db
     env_file:
       - ./reporting-service/db.env
     volumes:
       - reporting-mysql-data:/var/lib/mysql
     networks:
-      - backend-network
+      - backend
+    restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--ssl-mode=DISABLED"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
-  # API Gateway
-  api-gateway:
-    build:
-      context: ./api-gateway
-    ports:
-      - "8081:8080"
-    env_file:
-      - ./api-gateway/.env
-    networks:
-      - frontend-network
-      - backend-network
-    depends_on:
-      user-service:
-        condition: service_started
-      inventory-service:
-        condition: service_started
-      requisition-service:
-        condition: service_started
-      reporting-service:
-        condition: service_started
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Redis Service
+  # ========================
+  # Shared Dependencies
+  # ========================
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
+    container_name: redis
     networks:
-      - backend-network
+      - backend
+    restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
-    restart: unless-stopped
+      retries: 5
 
-  # Frontend Service
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+  # ========================
+  # API Gateway
+  # ========================
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
     ports:
-      - "5173:5173"
-    networks:
-      - frontend-network
+      - "8080:80"
     depends_on:
-      api-gateway:
-        condition: service_started
-    restart: unless-stopped
+      - user-service
+      - inventory-service
+      - requisition-service
+      - reporting-service
+    networks:
+      - backend
+    restart: always
+
+  # ========================
+  # Frontend
+  # ========================
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - backend
+    restart: always
+
+# ========================
+# Networks & Volumes
+# ========================
+networks:
+  backend:
+    driver: bridge
 
 volumes:
   user-mysql-data:
   inventory-mysql-data:
-  redis-data:
   requisition-mysql-data:
   reporting-mysql-data:
-
-networks:
-  frontend-network:
-    driver: bridge
-  backend-network:
-    driver: bridge
+  staticfiles:
