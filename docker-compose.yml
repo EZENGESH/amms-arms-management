@@ -1,33 +1,24 @@
-version: "3.9"
-
-services:
-  # ========================
-  # User Service
-  # ========================
-  user-service:
-    build: ./user-service
-    container_name: user-service
-    env_file:
-      - ./user-service/db.env
-    environment:
-      DB_HOST: user-db
-      DB_PORT: 3306
-    command: >
-      sh -c "
-        python manage.py migrate &&
-        python manage.py collectstatic --noinput &&
-        gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
-    volumes:
-      - ./user-service:/app
-      - staticfiles:/app/staticfiles
-    depends_on:
-      user-db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - backend
-    restart: always
+user-service:
+  build: ./user-service
+  container_name: user-service
+  env_file:
+    - ./user-service/.env   # <---- use this instead of db.env
+  command: >
+    sh -c "
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+  volumes:
+    - ./user-service:/app
+    - staticfiles:/app/staticfiles
+  depends_on:
+    user-db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+  networks:
+    - backend
+  restart: always
 
   user-db:
     image: mysql:8.0
