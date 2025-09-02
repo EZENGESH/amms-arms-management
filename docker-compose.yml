@@ -17,7 +17,7 @@ services:
       - ./user-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
-      - user-db
+      - db
       - redis
     networks:
       - backend
@@ -28,9 +28,9 @@ services:
       retries: 5
     restart: always
 
-  user-db:
+  db:
     image: mysql:8.0
-    container_name: user-db
+    container_name: db
     env_file:
       - ./user-service/db.env
     volumes:
