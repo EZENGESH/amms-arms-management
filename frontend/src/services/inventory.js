@@ -59,7 +59,7 @@ export const getInventoryDashboard = async () => {
 
 export const addFirearm = async (firearmData) => {
   try {
-    const response = await inventoryApi.post('/arms/', firearmData);
+    const response = await inventoryApi.post('api/arms/', firearmData);
     return response.data;
   } catch (error) {
     console.error('Error adding firearm:', error);
