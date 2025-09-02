@@ -97,7 +97,7 @@ services:
     ports:
       - "8003:8000"
     env_file:
-      - ./requisition-service/db.env
+      - ./requisition-service/.env
     environment:
       DB_HOST: requisition-db
       DB_PORT: 3306
