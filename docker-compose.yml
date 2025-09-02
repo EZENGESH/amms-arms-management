@@ -8,9 +8,11 @@ services:
     build: ./user-service
     container_name: user-service
     env_file:
-      - ./user-service/.env   # using .env instead of db.env
+      - ./user-service/.env
     command: >
       sh -c "
+        until nc -z user-db 3306;
+        do echo 'Waiting for user-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
@@ -52,16 +54,10 @@ services:
       - "8009:8000"
     env_file:
       - ./inventory-service/.env
-    environment:
-      DB_HOST: inventory-db
-      DB_PORT: 3306
     command: >
       sh -c "
         until nc -z inventory-db 3306;
-        do
-          echo 'Waiting for inventory-db...';
-          sleep 2;
-        done;
+        do echo 'Waiting for inventory-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
@@ -70,7 +66,7 @@ services:
       - staticfiles:/app/staticfiles
     depends_on:
       inventory-db:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     networks:
@@ -87,6 +83,11 @@ services:
     networks:
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ========================
   # Requisition Service
@@ -98,28 +99,19 @@ services:
       - "8003:8000"
     env_file:
       - ./requisition-service/.env
-    environment:
-      DB_HOST: requisition-db
-      DB_PORT: 3306
     command: >
       sh -c "
-        echo 'Waiting for requisition-db...' &&
-        until mysqladmin ping -h requisition-db -u$DJANGO_DB_USER -p$DJANGO_DB_PASSWORD --silent;
-        do
-          echo 'Waiting for requisition-db...';
-          sleep 2;
-        done;
-        echo 'DB is ready!' &&
+        until nc -z requisition-db 3306;
+        do echo 'Waiting for requisition-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
-
     volumes:
       - ./requisition-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
       requisition-db:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     networks:
@@ -136,6 +128,11 @@ services:
     networks:
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ========================
   # Reporting Service
@@ -146,17 +143,11 @@ services:
     ports:
       - "8010:8000"
     env_file:
-      - ./reporting-service/db.env
-    environment:
-      DB_HOST: reporting-db
-      DB_PORT: 3306
+      - ./reporting-service/.env
     command: >
       sh -c "
         until nc -z reporting-db 3306;
-        do
-          echo 'Waiting for reporting-db...';
-          sleep 2;
-        done;
+        do echo 'Waiting for reporting-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
@@ -165,7 +156,7 @@ services:
       - staticfiles:/app/staticfiles
     depends_on:
       reporting-db:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     networks:
@@ -182,6 +173,11 @@ services:
     networks:
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ========================
   # Shared Dependencies
