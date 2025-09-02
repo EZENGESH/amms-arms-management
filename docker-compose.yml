@@ -30,7 +30,7 @@ services:
     image: mysql:8.0
     container_name: user-db
     env_file:
-      - ./user-service/db.env
+      - ./user-service/.env
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
@@ -51,7 +51,7 @@ services:
     ports:
       - "8009:8000"
     env_file:
-      - ./inventory-service/db.env
+      - ./inventory-service/.env
     environment:
       DB_HOST: inventory-db
       DB_PORT: 3306
