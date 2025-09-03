@@ -36,7 +36,7 @@ export default function Login() {
         user: response.user
       });
 
-      navigate('/dashboard', { replace: true });
+      // Navigate to the dashboard after successful login
     } catch (error) {
       setError(error.message);
     } finally {
