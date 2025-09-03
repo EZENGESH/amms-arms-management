@@ -28,20 +28,6 @@ export default function RequisitionList() {
     return <div className="text-center mt-10 text-blue-500">Loading requisitions...</div>;
   }
 
-  if (requisitions.length === 0) {
-    return (
-      
-      <div className="text-center mt-10 text-gray-500">
-        No requisitions found.
-        <div className="mt-4">
-          <Link to="/requisition/new" className="text-blue-500 underline">
-            Create a new requisition
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <AdminLayout>
     <div className="max-w-4xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-md">
