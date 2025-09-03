@@ -1,25 +1,33 @@
-import { useContext, createContext, useState } from 'react';
-// FIX: Import useNavigate to handle redirection
+import { useContext, createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Create an AuthContext, initializing with null is safer
 const AuthContext = createContext(null);
 
-// AuthProvider component to wrap your app
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  // FIX: Initialize the navigate function
   const navigate = useNavigate();
 
+  // FIX: Add a useEffect to check for a token on initial component mount.
+  // This makes the login state persist across page reloads.
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      // If a token exists, you can decode it to get user info or
+      // simply set a user object to indicate authentication.
+      // For now, we'll set a placeholder user.
+      setUser({ token }); 
+    }
+  }, []); // The empty dependency array ensures this runs only once on mount.
+
   const login = (userData) => {
-    setUser(userData); // Set the user data after login
-    // FIX: Add navigation to the dashboard after setting the user
+    // The token is already being set in Login.jsx, which is fine.
+    setUser(userData); 
     navigate('/dashboard');
   };
 
   const logout = () => {
-    setUser(null); // Clear the user data on logout
-    // It's also good practice to navigate to the login page on logout
+    setUser(null); 
+    localStorage.removeItem('access_token'); // Clear the token on logout
     navigate('/login');
   };
 
@@ -30,13 +38,10 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Custom hook to use the AuthContext
 export function useAuth() {
   const context = useContext(AuthContext);
-  
   if (context === undefined || context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
   return context;
 }
