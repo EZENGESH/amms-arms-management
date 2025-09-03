@@ -24,26 +24,84 @@ function App() {
       {/* Private routes */}
       <Route 
         path="/dashboard" 
-        element={<Dashboard />}
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
         aria-label="Dashboard Page"
       />
       <Route 
         path="/inventory" 
-        element={<Inventory />}
+        element={
+          <PrivateRoute>
+            <Inventory />
+          </PrivateRoute>
+        }
       />
       <Route 
         path="/requisitions"
-        element={ <RequisitionForm/>} />
-      <Route 
-        path="/reports" 
-        element={<Reports />}
+        element={
+          <PrivateRoute>
+            <RequisitionForm />
+          </PrivateRoute>
+        }
       />
       <Route path="/requisition/new"
-        element={<RequisitionForm />} /> {/* 👈 form route */}
+        element={
+          <PrivateRoute>
+            <RequisitionForm />
+          </PrivateRoute>
+        } /> {/* 👈 form route */}
       <Route path="/requisitions"
-        element={<RequisitionList />} />
-      <Route path="/logfirearm" element={<LogFirearm />} />
-      <Route path="/requisitionlist" element={<RequisitionList />} />
+        element={
+          <PrivateRoute>
+            <RequisitionList />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/logfirearm"
+        element={
+          <PrivateRoute>
+            <LogFirearm />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/requisitionlist"
+        element={
+          <PrivateRoute>
+            <RequisitionList />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/logfirearm"
+        element={
+          <PrivateRoute>
+            <LogFirearm />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/requisitionlist"
+        element={
+          <PrivateRoute>
+            <RequisitionList />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/logfirearm"
+        element={
+          <PrivateRoute>
+            <LogFirearm />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/requisitionlist"
+        element={
+          <PrivateRoute>
+            <RequisitionList />
+          </PrivateRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
 
 
