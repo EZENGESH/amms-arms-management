@@ -8,7 +8,6 @@ import './styles/index.css';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
-      {/* FIX: AuthProvider must wrap your entire App component */}
       <AuthProvider>
         <App />
       </AuthProvider>
