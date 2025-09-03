@@ -11,7 +11,6 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import AdminLayout from "../layouts/AdminLayout";
 import Card from "../components/Card";
 
 // Register ChartJS components
@@ -169,7 +168,6 @@ function Dashboard() {
   };
 
   return (
-    <AdminLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 flex-wrap gap-2">
@@ -273,7 +271,7 @@ function Dashboard() {
           </>
         )}
       </div>
-    </AdminLayout>
+   
   );
 }
 
