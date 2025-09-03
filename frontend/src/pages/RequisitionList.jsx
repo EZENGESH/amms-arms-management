@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import AdminLayout from '../layouts/AdminLayout';
 
 export default function RequisitionList() {
   const [requisitions, setRequisitions] = useState([]);
@@ -29,6 +30,7 @@ export default function RequisitionList() {
 
   if (requisitions.length === 0) {
     return (
+      
       <div className="text-center mt-10 text-gray-500">
         No requisitions found.
         <div className="mt-4">
@@ -41,6 +43,7 @@ export default function RequisitionList() {
   }
 
   return (
+    <AdminLayout>
     <div className="max-w-4xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-md">
       <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">Requisitions</h1>
       
@@ -70,5 +73,7 @@ export default function RequisitionList() {
         </Link>
       </div>
     </div>
-  );
+    </AdminLayout>
+
+    );
 }
