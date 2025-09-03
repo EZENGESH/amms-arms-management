@@ -22,7 +22,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 router = DefaultRouter()
-router.register(r'requisitions', RequisitionViewSet)
+router.register(r'requisitions', RequisitionViewSet, basename='requisitions')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

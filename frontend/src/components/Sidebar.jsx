@@ -1,67 +1,37 @@
+import { NavLink } from 'react-router-dom';
+
 export default function Sidebar() {
+    // Helper for consistent styling
+    const linkClass = "block p-2 hover:bg-gray-200 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
     return (
         <aside className="bg-gray-100 w-64 h-full p-4 border-r" aria-label="Sidebar">
             <ul className="space-y-2">
                 <li>
-                    <a 
-                        href="/dashboard" 
-                        className="block p-2 hover:bg-gray-200 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        aria-label="Go to Dashboard"
-                    >
+                    <NavLink to="/dashboard" className={linkClass} aria-label="Go to Dashboard">
                         Dashboard
-                    </a>
+                    </NavLink>
                 </li>
                 <li>
-                    <a 
-                        href="/inventory" 
-                        className="block p-2 hover:bg-gray-200 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        aria-label="Go to Inventory"
-                    >
+                    <NavLink to="/inventory" className={linkClass} aria-label="Go to Inventory">
                         Inventory
-                    </a>
+                    </NavLink>
                 </li>
                 <li>
-                    <a 
-                        href="/requisitions" 
-                        className="block p-2 hover:bg-gray-200 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        aria-label="Go to Requisitions"
-                    >
-                        Requisitions
-                    </a>
+                    <NavLink to="/logfirearm" className={linkClass} aria-label="Go to add firearms">
+                        Add Firearm
+                    </NavLink>
                 </li>
                 <li>
-                    <a
-                        href="/logfirearm"
-                        className="flex justify-between mb-4"
-                        aria-label="Go to add firearms"
-                    >
-                        Add firearm
-                      
-                
-                   </a>
-                </li>
-                    <li>
-                    <a
-                        href="/logfirearm"
-                        className="flex justify-between mb-4"
-                        aria-label="Go to add firearms"
-                    >
-                        Add firearm
-                      
-                
-                   </a>
+                    <NavLink to="/requisitions" className={linkClass} aria-label="Go to Requisitions">
+                        Submit Requisition
+                    </NavLink>
                 </li>
                 <li>
-                    <a
-                        href="/requisitionlist"
-                        className="flex justify-between mb-4"
-                        aria-label="Go to Requisition List"
-                    >
+                    <NavLink to="/requisitionlist" className={linkClass} aria-label="Go to Requisition List">
                         Requisition List
-
-                   </a>
+                    </NavLink>
                 </li>
-
             </ul>
         </aside>
     );
