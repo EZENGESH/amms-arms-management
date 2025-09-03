@@ -36,11 +36,11 @@ function App() {
         element={<PrivateRoute><LogFirearm /></PrivateRoute>}
       />
       <Route 
-        path="/requisitions"
+        path="/requisitionslist"
         element={<PrivateRoute><RequisitionList /></PrivateRoute>}
       />
       <Route 
-        path="/requisitions/new"
+        path="/requisitions"
         element={<PrivateRoute><RequisitionForm /></PrivateRoute>}
       />
       <Route 
