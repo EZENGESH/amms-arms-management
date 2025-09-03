@@ -5,34 +5,35 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  // FIX: Add a loading state to prevent race conditions
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // FIX: Add a useEffect to check for a token on initial component mount.
-  // This makes the login state persist across page reloads.
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
-      // If a token exists, you can decode it to get user info or
-      // simply set a user object to indicate authentication.
       // For now, we'll set a placeholder user.
-      setUser({ token }); 
+      // In a real app, you'd decode the token to get user info.
+      setUser({ token });
     }
-  }, []); // The empty dependency array ensures this runs only once on mount.
+    // FIX: Set loading to false after checking for the token
+    setLoading(false);
+  }, []);
 
   const login = (userData) => {
-    // The token is already being set in Login.jsx, which is fine.
-    setUser(userData); 
+    setUser(userData);
     navigate('/dashboard');
   };
 
   const logout = () => {
-    setUser(null); 
-    localStorage.removeItem('access_token'); // Clear the token on logout
+    setUser(null);
+    localStorage.removeItem('access_token');
     navigate('/login');
   };
 
+  // FIX: Provide the loading state in the context value
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
