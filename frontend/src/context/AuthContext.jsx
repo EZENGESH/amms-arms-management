@@ -1,12 +1,18 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const AuthContext = createContext(null);
+// The default value should be an object that matches the shape of the provider's value
+const AuthContext = createContext({
+    isAuthenticated: false,
+    login: () => {},
+    logout: () => {},
+});
 
 export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const navigate = useNavigate();
 
+    // Check for token on initial load
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (token) {
@@ -14,25 +20,38 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
+    // FIX: Define the login function
     const login = (token) => {
         localStorage.setItem('authToken', token);
         setIsAuthenticated(true);
-        navigate('/dashboard'); // Redirect to dashboard after login
+        navigate('/dashboard'); // Redirect after login
     };
 
+    // FIX: Define the logout function
     const logout = () => {
         localStorage.removeItem('authToken');
         setIsAuthenticated(false);
-        navigate('/login'); // Redirect to login after logout
+        navigate('/login'); // Redirect after logout
+    };
+
+    // FIX: Provide isAuthenticated, login, and logout in the context value
+    const value = {
+        isAuthenticated,
+        login,
+        logout,
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 };
 
 export const useAuth = () => {
-    return useContext(AuthContext);
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 };
