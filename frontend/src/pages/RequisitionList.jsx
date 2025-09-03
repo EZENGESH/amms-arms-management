@@ -11,7 +11,7 @@ export default function RequisitionList() {
   useEffect(() => {
     const fetchRequisitions = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/requisition/');
+        const response = await axios.get('http://localhost:8003/api/requisition/');
         setRequisitions(response.data);
       } catch (error) {
         console.error('Error fetching requisitions:', error);
@@ -47,12 +47,18 @@ export default function RequisitionList() {
       <div className="space-y-6">
         {requisitions.map((req) => (
           <div key={req.id} className="p-6 border rounded-lg shadow-sm hover:shadow-md transition">
-            <h2 className="text-2xl font-semibold text-gray-700">{req.item_name}</h2>
+            {/* FIX: Display fields that match the form data */}
+            <h2 className="text-2xl font-semibold text-gray-700">
+              {req.rank} {req.name} ({req.service_number})
+            </h2>
             <p className="text-gray-600 mt-2">
-              <span className="font-medium">Quantity:</span> {req.quantity}
+              <span className="font-medium">Unit:</span> {req.station_unit}
             </p>
             <p className="text-gray-600 mt-1">
-              <span className="font-medium">Description:</span> {req.description}
+              <span className="font-medium">Firearm:</span> {req.firearm_type}
+            </p>
+            <p className="text-gray-600 mt-1">
+              <span className="font--medium">Quantity:</span> {req.quantity}
             </p>
           </div>
         ))}

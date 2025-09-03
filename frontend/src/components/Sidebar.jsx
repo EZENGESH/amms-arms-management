@@ -40,7 +40,28 @@ export default function Sidebar() {
                 
                    </a>
                 </li>
+                    <li>
+                    <a
+                        href="/logfirearm"
+                        className="flex justify-between mb-4"
+                        aria-label="Go to add firearms"
+                    >
+                        Add firearm
+                      
                 
+                   </a>
+                </li>
+                <li>
+                    <a
+                        href="/requisitionlist"
+                        className="flex justify-between mb-4"
+                        aria-label="Go to Requisition List"
+                    >
+                        Requisition List
+
+                   </a>
+                </li>
+
             </ul>
         </aside>
     );

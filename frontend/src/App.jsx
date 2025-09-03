@@ -43,6 +43,7 @@ function App() {
       <Route path="/requisitions"
         element={<RequisitionList />} />
       <Route path="/logfirearm" element={<LogFirearm />} />
+      <Route path="/requisitionlist" element={<RequisitionList />} />
       <Route path="*" element={<NotFound />} />
 
 
