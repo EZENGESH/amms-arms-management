@@ -91,7 +91,6 @@ const fetchData = async () => {
 
   // Main render
   return (
-    <AdminLayout>
       <div className="space-y-6 p-4">
         <h1 className="text-2xl font-bold">Firearms Inventory</h1>
         
@@ -164,6 +163,5 @@ const fetchData = async () => {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 }

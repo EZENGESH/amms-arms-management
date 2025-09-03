@@ -56,7 +56,6 @@ export default function LogFirearm() {
   };
 
   return (
-    <AdminLayout>
       <div className="max-w-md mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Add New Firearm</h1>
         
@@ -139,6 +138,5 @@ export default function LogFirearm() {
           </button>
         </form>
       </div>
-    </AdminLayout>
   );
 }
