@@ -67,17 +67,6 @@ export default function Login() {
           {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
-      
-      <div className="mt-6 text-center">
-        <p className="text-gray-600 mb-3">Don't have an account?</p>
-        <Button 
-          onClick={() => navigate('/register')}
-          disabled={isLoading}
-          className="w-full bg-green-500 hover:bg-green-700"
-        >
-          Create New Account
-        </Button>
-      </div>
     </AuthLayout>
   );
 }
