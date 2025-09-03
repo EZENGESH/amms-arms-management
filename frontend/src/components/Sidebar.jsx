@@ -28,7 +28,7 @@ export default function Sidebar() {
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink to="/requisitionlist" className={linkClass} aria-label="Go to Requisition List">
+                    <NavLink to="/requisitionslist" className={linkClass} aria-label="Go to Requisition List">
                         Requisition List
                     </NavLink>
                 </li>
