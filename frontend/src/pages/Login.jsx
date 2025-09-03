@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../layouts/AuthLayout';
 import Button from '../components/Button';
 import { loginUser } from '../services/auth';
@@ -12,37 +12,33 @@ export default function Login() {
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  e.preventDefault();
+  setIsLoading(true);
+  setError(null);
 
-    const formData = new FormData(e.target);
-    const credentials = {
-      username: formData.get('username').trim(),
-      password: formData.get('password')
-    };
-
-    try {
-      const response = await loginUser(credentials);
-      
-      if (!response?.token) {
-        throw new Error('Invalid server response');
-      }
-
-      localStorage.setItem('access_token', response.token);
-      login({
-        username: credentials.username,
-        token: response.token,
-        user: response.user
-      });
-
-      // Navigate to the dashboard after successful login
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
+  const formData = new FormData(e.target);
+  const credentials = {
+    username: formData.get('username').trim(),
+    password: formData.get('password'),
   };
+
+  try {
+    const response = await loginUser(credentials); // your API call
+    if (!response?.token) throw new Error('Invalid server response');
+
+    // Use the unified login
+    login({
+      username: credentials.username,
+      token: response.token,
+      user: response.user,
+    });
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <AuthLayout>

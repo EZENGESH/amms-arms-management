@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
   // FIX: Add a loading state to prevent race conditions
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
+a
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {

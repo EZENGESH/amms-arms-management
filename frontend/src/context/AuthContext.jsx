@@ -1,57 +1,45 @@
+// src/context/AuthContext.jsx
 import { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// The default value should be an object that matches the shape of the provider's value
-const AuthContext = createContext({
-    isAuthenticated: false,
-    login: () => {},
-    logout: () => {},
-});
+const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const navigate = useNavigate();
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-    // Check for token on initial load
-    useEffect(() => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            setIsAuthenticated(true);
-        }
-    }, []);
-
-    // FIX: Define the login function
-    const login = (token) => {
-        localStorage.setItem('authToken', token);
-        setIsAuthenticated(true);
-        navigate('/dashboard'); // Redirect after login
-    };
-
-    // FIX: Define the logout function
-    const logout = () => {
-        localStorage.removeItem('authToken');
-        setIsAuthenticated(false);
-        navigate('/login'); // Redirect after logout
-    };
-
-    // FIX: Provide isAuthenticated, login, and logout in the context value
-    const value = {
-        isAuthenticated,
-        login,
-        logout,
-    };
-
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
-};
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
+  // Check for token on initial load
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      // You can expand this to include user info from token
+      setUser({ token });
     }
-    return context;
-};
+    setLoading(false);
+  }, []);
+
+  const login = (userData) => {
+    localStorage.setItem('access_token', userData.token);
+    setUser(userData);
+    navigate('/dashboard');
+  };
+
+  const logout = () => {
+    localStorage.removeItem('access_token');
+    setUser(null);
+    navigate('/login');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
+}
