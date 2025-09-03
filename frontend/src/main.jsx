@@ -3,12 +3,14 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './context/AuthContext'; // Make sure this path is correct
+import { AuthProvider } from './hooks/useAuth'; 
+import './index.css';
 import './styles/index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
-      {/* FIX: Wrap the App component with AuthProvider */}
+      {/* FIX: AuthProvider must wrap your entire App component */}
       <AuthProvider>
         <App />
       </AuthProvider>

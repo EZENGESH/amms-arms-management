@@ -1,7 +1,7 @@
 import { useContext, createContext, useState } from 'react';
 
-// Create an AuthContext
-const AuthContext = createContext();
+// Create an AuthContext, initializing with null is safer
+const AuthContext = createContext(null);
 
 // AuthProvider component to wrap your app
 export function AuthProvider({ children }) {
@@ -24,5 +24,13 @@ export function AuthProvider({ children }) {
 
 // Custom hook to use the AuthContext
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  
+  // FIX: Add a check to ensure the hook is used within an AuthProvider.
+  // This provides a better error message if used incorrectly.
+  if (context === undefined || context === null) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
+  return context;
 }
