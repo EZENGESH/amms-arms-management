@@ -25,6 +25,7 @@ export default function Login() {
       const response = await loginUser(credentials); // your API call
       
       // FIX: Check for 'access' token, which is the JWT standard.
+      console.log("Login API Response:", response);
       if (!response?.access) {
         throw new Error('Invalid server response. Login failed.');
       }
