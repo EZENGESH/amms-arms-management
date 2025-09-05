@@ -5,7 +5,7 @@ from rest_framework.authtoken import views as token_views
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
-from users.views import UserDetailView
+from user_service.views import UserDetailView
 
 # API router
 router = DefaultRouter()
