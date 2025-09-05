@@ -69,12 +69,43 @@ export default function Dashboard() {
     datasets: [{ label: "Requisitions", data: [] }],
   });
 
-  // Function to manually add auth headers
+  // Function to manually add auth headers with token validation
   const getAuthHeaders = () => {
     const token = localStorage.getItem("access_token");
+    
+    // Check if token exists and is valid (not expired)
+    if (!token) {
+      console.error("No access token found in localStorage");
+      throw new Error("Authentication required. Please log in.");
+    }
+    
+    // Basic token validation (you might want to add JWT expiration check)
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error("Invalid token format");
+      }
+      
+      const payload = JSON.parse(atob(tokenParts[1]));
+      const currentTime = Date.now() / 1000;
+      
+      if (payload.exp && payload.exp < currentTime) {
+        console.error("Token has expired");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        throw new Error("Token expired. Please log in again.");
+      }
+      
+    } catch (err) {
+      console.error("Token validation failed:", err);
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      throw new Error("Invalid authentication token. Please log in again.");
+    }
+
     return {
       headers: {
-        Authorization: token ? `Bearer ${token}` : "",
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     };
@@ -84,23 +115,52 @@ export default function Dashboard() {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
+      
       try {
-        // Check if user is authenticated
+        // Check authentication status first
         const token = localStorage.getItem("access_token");
-        const refreshToken = localStorage.getItem("refresh_token");
-        
-        if (!token && !refreshToken) {
-          throw new Error("No authentication tokens found. Please log in.");
+        if (!token) {
+          throw new Error("Please log in to access the dashboard.");
         }
 
-        console.log("Access Token exists:", !!token);
-        console.log("Refresh Token exists:", !!refreshToken);
+        console.log("Access Token exists, attempting to fetch data...");
+
+        // Test authentication with a simple request first
+        try {
+          const testResponse = await api.get("/api/users/me/", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          console.log("Authentication test successful:", testResponse.status);
+        } catch (testError) {
+          console.error("Authentication test failed:", testError);
+          if (testError.response?.status === 403 || testError.response?.status === 401) {
+            throw new Error("Authentication failed. Token may be invalid or expired.");
+          }
+        }
 
         // Fetch all data concurrently using the API clients with manual auth headers
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/arms/", getAuthHeaders()),
-          requisitionApi.get("/api/requisitions/", getAuthHeaders()),
-          api.get("/api/users/", getAuthHeaders()),
+          inventoryApi.get("/api/firearms/", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }),
+          requisitionApi.get("/api/requisitions/", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }),
+          api.get("/api/users/", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }),
         ]);
 
         // --- Process Stats ---
@@ -191,11 +251,14 @@ export default function Dashboard() {
           localStorage.removeItem("refresh_token");
           // Redirect to login if authentication fails
           setTimeout(() => navigate('/login'), 2000);
+        } else if (err.message?.includes("Authentication required") || 
+                   err.message?.includes("Please log in") ||
+                   err.message?.includes("Token expired") ||
+                   err.message?.includes("Invalid authentication")) {
+          setError(err.message);
+          setTimeout(() => navigate('/login'), 2000);
         } else if (err.response?.status === 404) {
           setError("API endpoints not found. Please check if the backend services are running.");
-        } else if (err.message?.includes("No authentication token")) {
-          setError("Please log in to access the dashboard.");
-          setTimeout(() => navigate('/login'), 2000);
         } else {
           setError("Failed to fetch dashboard data. Please try again later.");
         }
@@ -205,30 +268,6 @@ export default function Dashboard() {
           totalArms: 0,
           activeRequisitions: 0,
           registeredUsers: 0,
-        });
-        
-        setArmsData({
-          labels: [],
-          datasets: [
-            {
-              label: "Number of Items",
-              data: [],
-              backgroundColor: "rgba(53, 162, 235, 0.5)",
-              borderColor: "rgb(53, 162, 235)",
-              borderWidth: 1,
-            },
-          ],
-        });
-        
-        setRequisitionData({
-          labels: [],
-          datasets: [
-            {
-              label: "Requisitions",
-              data: [],
-              backgroundColor: [],
-            },
-          ],
         });
         
         setRecentActivities([]);
@@ -279,15 +318,21 @@ export default function Dashboard() {
         <Card title="Registered Users"><p className="text-3xl font-bold">{stats.registeredUsers}</p></Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <Bar data={armsData} options={barOptions} />
+      {/* Charts Row - Only show if we have data */}
+      {(armsData.labels.length > 0 || requisitionData.labels.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {armsData.labels.length > 0 && (
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <Bar data={armsData} options={barOptions} />
+            </div>
+          )}
+          {requisitionData.labels.length > 0 && (
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <Pie data={requisitionData} options={pieOptions} />
+            </div>
+          )}
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <Pie data={requisitionData} options={pieOptions} />
-        </div>
-      </div>
+      )}
 
       {/* Recent Activity + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
