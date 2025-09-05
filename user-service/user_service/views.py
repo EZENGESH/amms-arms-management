@@ -9,7 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from .models import Registration
 from .serializers import (
-    CustomUserSerializer,ChangePasswordSerializer,UserSerializer, UserProfileSerializer,
+    CustomUserSerializer,UserSerializer, UserProfileSerializer,
     LoginSerializer, RegistrationSerializer
 )
 from rest_framework.response import Response
