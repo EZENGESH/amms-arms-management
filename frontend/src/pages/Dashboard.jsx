@@ -76,16 +76,22 @@ export default function Dashboard() {
       try {
         // Check if user is authenticated
         const token = localStorage.getItem("access_token");
-        if (!token) {
-          throw new Error("No authentication token found. Please log in.");
+        const refreshToken = localStorage.getItem("refresh_token");
+        
+        if (!token && !refreshToken) {
+          throw new Error("No authentication tokens found. Please log in.");
         }
 
+        // Debug: Log tokens to check if they exist
+        console.log("Access Token:", token ? "Exists" : "Missing");
+        console.log("Refresh Token:", refreshToken ? "Exists" : "Missing");
+
         // Fetch all data concurrently using the API clients
-        // Using correct endpoints without /api/ prefix since base URLs already point to the API
+        // Using correct endpoints with /api/ prefix
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/arms/"), // Correct endpoint: /firearms/
-          requisitionApi.get("/api/requisitions/"), // Correct endpoint: /requisitions/
-          api.get("/api/users/"), // Correct endpoint: /users/
+          inventoryApi.get("/api/arms/"), // Correct endpoint with /api/ prefix
+          requisitionApi.get("/api/requisitions/"), // Correct endpoint with /api/ prefix
+          api.get("/api/users/"), // Correct endpoint with /api/ prefix
         ]);
 
         // --- Process Stats ---
@@ -173,6 +179,9 @@ export default function Dashboard() {
         
         if (err.response?.status === 403) {
           setError("Authentication failed. Please log in again.");
+          // Clear invalid tokens
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
           // Redirect to login if authentication fails
           setTimeout(() => navigate('/login'), 2000);
         } else if (err.response?.status === 404) {
