@@ -35,6 +35,9 @@ services:
     container_name: user-db
     env_file:
       - ./user-service/db.env
+    ports:
+      - "3311:3306"
+    
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
