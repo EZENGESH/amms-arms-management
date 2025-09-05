@@ -74,12 +74,18 @@ export default function Dashboard() {
       setIsLoading(true);
       setError(null);
       try {
+        // Check if user is authenticated
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          throw new Error("No authentication token found. Please log in.");
+        }
+
         // Fetch all data concurrently using the API clients
-        // Using correct endpoints based on your API client configuration
+        // Using correct endpoints without /api/ prefix since base URLs already point to the API
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/arms/"), // Correct endpoint for inventory
-          requisitionApi.get("/api/requisitions/"), // Correct endpoint for requisitions
-          api.get("/api/users/"), // Correct endpoint for users
+          inventoryApi.get("/firearms/"), // Correct endpoint: /firearms/
+          requisitionApi.get("/requisitions/"), // Correct endpoint: /requisitions/
+          api.get("/users/"), // Correct endpoint: /users/
         ]);
 
         // --- Process Stats ---
@@ -165,13 +171,20 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         
-        if (err.response?.status === 404) {
+        if (err.response?.status === 403) {
+          setError("Authentication failed. Please log in again.");
+          // Redirect to login if authentication fails
+          setTimeout(() => navigate('/login'), 2000);
+        } else if (err.response?.status === 404) {
           setError("API endpoints not found. Please check if the backend services are running.");
+        } else if (err.message?.includes("No authentication token")) {
+          setError("Please log in to access the dashboard.");
+          setTimeout(() => navigate('/login'), 2000);
         } else {
           setError("Failed to fetch dashboard data. Please try again later.");
         }
         
-        // Set fallback data for demo purposes (removed hardcoded values)
+        // Set empty data
         setStats({
           totalArms: 0,
           activeRequisitions: 0,
@@ -209,7 +222,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [navigate]);
 
   // Chart options
   const barOptions = { 
@@ -239,7 +252,7 @@ export default function Dashboard() {
       {error && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
           <p>{error}</p>
-          <p className="text-sm mt-1">Please ensure all backend services are running.</p>
+          <p className="text-sm mt-1">Please ensure you are logged in and have proper permissions.</p>
         </div>
       )}
 
