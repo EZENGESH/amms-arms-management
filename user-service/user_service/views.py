@@ -9,7 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from .models import Registration
 from .serializers import (
-    CustomUserSerializer, UserSerializer, UserProfileSerializer,
+    CustomUserSerializer,ChangePasswordSerializer,UserSerializer, UserProfileSerializer,
     LoginSerializer, RegistrationSerializer
 )
 from rest_framework.response import Response
@@ -157,11 +157,14 @@ class UserListView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
+    ordering = ['id']
+
 
 class UserProfileView(generics.RetrieveAPIView):
     """
     API endpoint for retrieving the current user's profile
     """
+    queryset = CustomUser.objects.all()
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
     
