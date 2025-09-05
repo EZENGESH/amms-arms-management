@@ -218,7 +218,9 @@ services:
   # Frontend
   # ========================
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: frontend
     command: npm run dev -- --host 0.0.0.0
     volumes:
