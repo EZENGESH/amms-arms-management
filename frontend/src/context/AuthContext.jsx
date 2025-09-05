@@ -9,31 +9,24 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('auth_token'); // Use a consistent key
     if (token) {
-      // For persistence, you can decode the token to get user info
-      // For now, setting a simple user object is enough to signify being logged in.
-      setUser({ isAuthenticated: true });
+      // In a real app, you might fetch user details using the token
+      setUser({ token });
     }
     setLoading(false);
   }, []);
 
-  // FIX: The login function now expects an object with 'access' and 'refresh' tokens.
+  // FIX: The login function now handles the response from DRF's authtoken
   const login = (authData) => {
-    // It also expects user details to be passed in separately.
-    const { access, refresh, user: userData } = authData;
-
-    localStorage.setItem('access_token', access);
-    localStorage.setItem('refresh_token', refresh);
-    
-    setUser(userData); // Set the actual user object in the state
+    // authData is the object from the API: { token, user_id, username }
+    localStorage.setItem('auth_token', authData.token);
+    setUser({ id: authData.user_id, username: authData.username });
     navigate('/dashboard');
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    // FIX: Also remove the refresh token on logout.
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('auth_token');
     setUser(null);
     navigate('/login');
   };

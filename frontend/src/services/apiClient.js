@@ -12,89 +12,55 @@ const inventoryApi = axios.create({ baseURL: INVENTORY_API_BASE_URL, headers: { 
 const requisitionApi = axios.create({ baseURL: REQUISITION_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
 const logfirearmapi = axios.create({ baseURL: FIREARM_LOG_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
 
-// Refresh token function
-async function refreshToken() {
-  const refresh = localStorage.getItem("refresh_token");
-  if (!refresh) {
-    console.warn("No refresh token found. Redirecting to login.");
-    window.location.href = "/login";
-    return Promise.reject("No refresh token");
-  }
+// --- Interceptors ---
 
-  try {
-    const response = await axios.post(`${USER_API_BASE_URL}/api/auth/token/refresh/`, { refresh });
-    const newAccessToken = response.data.access;
-    localStorage.setItem("access_token", newAccessToken);
-    return { access: newAccessToken };
-  } catch (error) {
-    console.error("Failed to refresh token:", error);
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    window.location.href = "/login";
-    throw error;
-  }
-}
-
-// Attach token to requests
+// 1. Attach token to every request
 const addTokenInterceptor = (instance) => {
-  instance.interceptors.request.use((config) => {
-    const token = localStorage.getItem("access_token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
-};
-
-// Handle 401 by refreshing token
-const addRefreshInterceptor = (instance) => {
-  instance.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true;
-        try {
-          const newToken = await refreshToken();
-          originalRequest.headers.Authorization = `Bearer ${newToken.access}`;
-          return instance(originalRequest);
-        } catch (err) {
-          console.error("Token refresh failed:", err);
-        }
+  instance.interceptors.request.use(
+    (config) => {
+      // Get the token from the key we set in AuthContext
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        // DRF authtoken expects the "Token" keyword, not "Bearer".
+        config.headers.Authorization = `Token ${token}`;
       }
-      return Promise.reject(error);
-    }
+      return config;
+    },
+    (error) => Promise.reject(error)
   );
 };
 
-// Generic error handling
-const addErrorHandlingInterceptor = (instance, serviceName) => {
+// 2. Generic error logging
+const addErrorLoggingInterceptor = (instance, serviceName) => {
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
       if (!error.response) {
-        console.error(`${serviceName} service not responding:`, error.message);
-      } else if (error.response.status === 404) {
-        console.error(`${serviceName} endpoint not found:`, error.config.url);
-      } else if ([502, 503].includes(error.response.status)) {
-        console.error(`${serviceName} service temporarily unavailable`);
+        console.error(`${serviceName} Service: Network Error or service is down.`);
       } else {
-        console.error(`${serviceName} API Error:`, error.response.status, error.response.data);
+        console.error(
+          `${serviceName} Service Error: ${error.response.status} on ${error.config.url}`,
+          error.response.data
+        );
       }
       return Promise.reject(error);
     }
   );
 };
 
-// Apply interceptors
-[api, inventoryApi, requisitionApi, logfirearmapi].forEach((instance) => {
-  addTokenInterceptor(instance);
-  addRefreshInterceptor(instance);
-});
+// --- Apply Interceptors ---
 
-addErrorHandlingInterceptor(api, "User");
-addErrorHandlingInterceptor(inventoryApi, "Inventory");
-addErrorHandlingInterceptor(requisitionApi, "Requisition");
-addErrorHandlingInterceptor(logfirearmapi, "Firearm Log");
+// Array of all client instances
+const allInstances = [api, inventoryApi, requisitionApi, logfirearmapi];
 
-// Exports
+// Apply the token interceptor to all instances
+allInstances.forEach(addTokenInterceptor);
+
+// Apply specific error loggers
+addErrorLoggingInterceptor(api, "User");
+addErrorLoggingInterceptor(inventoryApi, "Inventory");
+addErrorLoggingInterceptor(requisitionApi, "Requisition");
+addErrorLoggingInterceptor(logfirearmapi, "Firearm Log");
+
+// --- Exports ---
 export { api, inventoryApi, requisitionApi, logfirearmapi };
-export default api;
