@@ -12,6 +12,7 @@ from .serializers import (
     CustomUserSerializer, UserSerializer, UserProfileSerializer,
     LoginSerializer, RegistrationSerializer
 )
+from rest_framework.response import Response
 
 User = get_user_model()
 
@@ -278,3 +279,13 @@ class RegistrationRejectView(APIView):
         return Response({
             'message': f'Registration for {registration.username} rejected and deleted'
         }, status=status.HTTP_200_OK)
+class UserDetailView(APIView):
+    """
+    View to get the current user's details from a token.
+    Used by other services for token validation.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
