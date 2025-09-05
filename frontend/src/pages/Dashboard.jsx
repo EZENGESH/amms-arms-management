@@ -98,7 +98,7 @@ export default function Dashboard() {
 
         // Fetch all data concurrently using the API clients with manual auth headers
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/firearms/", getAuthHeaders()),
+          inventoryApi.get("/api/arms/", getAuthHeaders()),
           requisitionApi.get("/api/requisitions/", getAuthHeaders()),
           api.get("/api/users/", getAuthHeaders()),
         ]);
