@@ -12,6 +12,7 @@ import {
   Legend,
 } from "chart.js";
 import Card from "../components/Card";
+// FIX: Import the central API clients. The interceptors in these clients will handle auth.
 import { api, inventoryApi, requisitionApi } from "../services/apiClient";
 
 // Register ChartJS components
@@ -25,7 +26,6 @@ ChartJS.register(
   Legend
 );
 
-// A sub-component to render recent activities
 const RecentActivity = ({ activities }) => (
   <div className="space-y-4">
     {activities.length > 0 ? (
@@ -34,7 +34,7 @@ const RecentActivity = ({ activities }) => (
           <div className="flex justify-between">
             <p className="font-medium">New Requisition: {activity.firearm_type}</p>
             <span className="text-sm text-gray-500">
-              {new Date(activity.created_at).toLocaleDateString()}
+              {new Date(activity.created_at || activity.date_created).toLocaleDateString()}
             </span>
           </div>
           <p className="text-sm text-gray-600">
@@ -48,37 +48,6 @@ const RecentActivity = ({ activities }) => (
   </div>
 );
 
-// Custom refresh token function
-async function refreshAuthToken() {
-  const refresh = localStorage.getItem("refresh_token");
-  if (!refresh) {
-    throw new Error("No refresh token available");
-  }
-
-  try {
-    const response = await fetch("http://localhost:8001/api/auth/token/refresh/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refresh }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    localStorage.setItem("access_token", data.access);
-    return data.access;
-  } catch (error) {
-    console.error("Token refresh error:", error);
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    throw error;
-  }
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -89,86 +58,11 @@ export default function Dashboard() {
     registeredUsers: 0,
   });
   const [recentActivities, setRecentActivities] = useState([]);
+  const [armsData, setArmsData] = useState({ labels: [], datasets: [] });
+  const [requisitionData, setRequisitionData] = useState({ labels: [], datasets: [] });
 
-  const [armsData, setArmsData] = useState({
-    labels: [],
-    datasets: [{ label: "Number of Items", data: [] }],
-  });
-
-  const [requisitionData, setRequisitionData] = useState({
-    labels: [],
-    datasets: [{ label: "Requisitions", data: [] }],
-  });
-
-  // Enhanced API call function with token refresh and retry logic
-  const makeAuthenticatedRequest = async (apiInstance, endpoint, retry = true) => {
-    const token = localStorage.getItem("access_token");
-    
-    if (!token) {
-      throw new Error("No authentication token found");
-    }
-
-    try {
-      const response = await apiInstance.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      return response;
-    } catch (error) {
-      // If we get 403/401 and have retries left, try to refresh token
-      if (retry && (error.response?.status === 403 || error.response?.status === 401)) {
-        console.log("Attempting token refresh due to authentication error");
-        try {
-          const newToken = await refreshAuthToken();
-          // Retry the request with new token
-          const retryResponse = await apiInstance.get(endpoint, {
-            headers: {
-              Authorization: `Bearer ${newToken}`,
-              "Content-Type": "application/json",
-            },
-          });
-          return retryResponse;
-        } catch (refreshError) {
-          console.error("Token refresh failed:", refreshError);
-          throw new Error("Authentication failed. Please log in again.");
-        }
-      }
-      throw error;
-    }
-  };
-
-  // Check if user is authenticated
-  const checkAuthentication = () => {
-    const accessToken = localStorage.getItem("access_token");
-    const refreshToken = localStorage.getItem("refresh_token");
-    
-    if (!accessToken || !refreshToken) {
-      return false;
-    }
-
-    // Basic token validation
-    try {
-      const tokenParts = accessToken.split('.');
-      if (tokenParts.length !== 3) {
-        return false;
-      }
-      
-      const payload = JSON.parse(atob(tokenParts[1]));
-      const currentTime = Date.now() / 1000;
-      
-      if (payload.exp && payload.exp < currentTime) {
-        console.log("Token expired, attempting refresh...");
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Token validation error:", error);
-      return false;
-    }
-  };
+  // FIX: All custom auth logic (checkAuthentication, refreshAuthToken, makeAuthenticatedRequest) has been removed.
+  // We will rely on the apiClient's interceptors to handle tokens.
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,86 +70,39 @@ export default function Dashboard() {
       setError(null);
       
       try {
-        // Check authentication first
-        if (!checkAuthentication()) {
-          // Try to refresh token if we have a refresh token but no valid access token
-          const refreshToken = localStorage.getItem("refresh_token");
-          if (refreshToken) {
-            try {
-              console.log("Attempting automatic token refresh...");
-              await refreshAuthToken();
-              // If refresh succeeds, continue with data fetching
-            } catch (refreshError) {
-              throw new Error("Session expired. Please log in again.");
-            }
-          } else {
-            throw new Error("Authentication required. Please log in.");
-          }
-        }
-
-        console.log("Authentication valid, fetching data...");
-
-        // Fetch all data with enhanced authentication handling
-        const [inventoryRes, requisitionsRes, usersRes] = await Promise.allSettled([
-          makeAuthenticatedRequest(inventoryApi, "/api/arms/"),
-          makeAuthenticatedRequest(requisitionApi, "/api/requisitions/"),
-          makeAuthenticatedRequest(api, "/api/users/"),
+        // FIX: Use Promise.all with the central API clients directly.
+        const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
+          inventoryApi.get("/api/arms/"),
+          requisitionApi.get("/api/requisitions/"),
+          api.get("/api/users/"),
         ]);
 
-        // Check for any failed requests
-        const failedRequests = [inventoryRes, requisitionsRes, usersRes].filter(
-          result => result.status === 'rejected'
-        );
-
-        if (failedRequests.length > 0) {
-          const firstError = failedRequests[0].reason;
-          console.error("API request failed:", firstError);
-          
-          if (firstError.message.includes("Authentication failed") || 
-              firstError.message.includes("No authentication") ||
-              firstError.response?.status === 403 ||
-              firstError.response?.status === 401) {
-            throw new Error("Authentication failed. Please log in again.");
-          }
-          throw new Error("Failed to fetch some dashboard data. Please try again.");
-        }
-
-        // Extract data from successful responses
-        const inventoryData = inventoryRes.value.data.results || inventoryRes.value.data || [];
-        const requisitionsData = requisitionsRes.value.data.results || requisitionsRes.value.data || [];
-        const usersData = usersRes.value.data.results || usersRes.value.data || [];
+        // Extract data, handling potential pagination from Django REST Framework
+        const inventoryData = inventoryRes.data.results || inventoryRes.data || [];
+        const requisitionsData = requisitionsRes.data.results || requisitionsRes.data || [];
+        const usersData = usersRes.data.results || usersRes.data || [];
 
         // --- Process Stats ---
-        const totalFirearms = inventoryRes.value.data.count || inventoryData.length || 0;
-        const activeRequisitionsCount = requisitionsData.filter(
-          (req) => req.status === "Pending" || req.status === "pending"
-        ).length;
-        const usersCount = usersRes.value.data.count || usersData.length || 0;
-
         setStats({
-          totalArms: totalFirearms,
-          activeRequisitions: activeRequisitionsCount,
-          registeredUsers: usersCount,
+          totalArms: inventoryRes.data.count || inventoryData.length,
+          activeRequisitions: requisitionsData.filter(req => req.status?.toLowerCase() === "pending").length,
+          registeredUsers: usersRes.data.count || usersData.length,
         });
 
         // --- Process Arms Chart Data ---
-        const typeCounts = {};
-        inventoryData.forEach(firearm => {
-          const type = firearm.type || firearm.firearm_type || "Unknown";
-          typeCounts[type] = (typeCounts[type] || 0) + 1;
-        });
+        const typeCounts = inventoryData.reduce((acc, firearm) => {
+          const type = firearm.type || "Unknown";
+          acc[type] = (acc[type] || 0) + (firearm.quantity || 1);
+          return acc;
+        }, {});
 
         setArmsData({
           labels: Object.keys(typeCounts),
-          datasets: [
-            {
-              label: "Number of Items",
-              data: Object.values(typeCounts),
-              backgroundColor: "rgba(53, 162, 235, 0.5)",
-              borderColor: "rgb(53, 162, 235)",
-              borderWidth: 1,
-            },
-          ],
+          datasets: [{
+            label: "Number of Items",
+            data: Object.values(typeCounts),
+            backgroundColor: "rgba(53, 162, 235, 0.5)",
+          }],
         });
 
         // --- Process Requisition Chart Data ---
@@ -267,55 +114,35 @@ export default function Dashboard() {
         
         const statusColors = {
           Approved: "rgba(75, 192, 192, 0.6)",
-          approved: "rgba(75, 192, 192, 0.6)",
           Pending: "rgba(255, 206, 86, 0.6)",
-          pending: "rgba(255, 206, 86, 0.6)",
           Rejected: "rgba(255, 99, 132, 0.6)",
-          rejected: "rgba(255, 99, 132, 0.6)",
         };
 
         setRequisitionData({
           labels: Object.keys(requisitionsByStatus),
-          datasets: [
-            {
-              label: "Requisitions",
-              data: Object.values(requisitionsByStatus),
-              backgroundColor: Object.keys(requisitionsByStatus).map(
-                status => statusColors[status] || 'rgba(201, 203, 207, 0.6)'
-              ),
-            },
-          ],
+          datasets: [{
+            label: "Requisitions",
+            data: Object.values(requisitionsByStatus),
+            backgroundColor: Object.keys(requisitionsByStatus).map(status => statusColors[status] || 'rgba(201, 203, 207, 0.6)'),
+          }],
         });
 
         // --- Process Recent Activities ---
         const sortedRequisitions = [...requisitionsData].sort(
-          (a, b) => new Date(b.created_at || b.date_created || 0) - new Date(a.created_at || a.date_created || 0)
+          (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
         );
         setRecentActivities(sortedRequisitions.slice(0, 5));
 
       } catch (err) {
         console.error("Dashboard fetch error:", err);
-        
-        if (err.message.includes("Authentication") || 
-            err.message.includes("log in") || 
-            err.message.includes("Session expired")) {
-          setError(err.message);
-          // Clear tokens and redirect to login
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
+        // If the interceptor fails to refresh the token, it will throw an error.
+        // We catch it here and redirect to login.
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setError("Your session has expired. Please log in again.");
           setTimeout(() => navigate('/login'), 2000);
         } else {
           setError("Failed to fetch dashboard data. Please try again later.");
         }
-        
-        // Set empty data
-        setStats({
-          totalArms: 0,
-          activeRequisitions: 0,
-          registeredUsers: 0,
-        });
-        
-        setRecentActivities([]);
       } finally {
         setIsLoading(false);
       }
@@ -324,7 +151,10 @@ export default function Dashboard() {
     fetchData();
   }, [navigate]);
 
-  // Chart options
+  // Chart options... (rest of the component is the same)
+  // ...
+// ... (The rest of your return statement remains the same)
+// ...
   const barOptions = { 
     responsive: true, 
     plugins: { 
@@ -350,9 +180,8 @@ export default function Dashboard() {
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
       {error && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
           <p>{error}</p>
-          <p className="text-sm mt-1">Please ensure you are logged in and have proper permissions.</p>
         </div>
       )}
 
@@ -363,21 +192,19 @@ export default function Dashboard() {
         <Card title="Registered Users"><p className="text-3xl font-bold">{stats.registeredUsers}</p></Card>
       </div>
 
-      {/* Charts Row - Only show if we have data */}
-      {(armsData.labels.length > 0 || requisitionData.labels.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {armsData.labels.length > 0 && (
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <Bar data={armsData} options={barOptions} />
-            </div>
-          )}
-          {requisitionData.labels.length > 0 && (
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <Pie data={requisitionData} options={pieOptions} />
-            </div>
-          )}
-        </div>
-      )}
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {armsData.labels.length > 0 && (
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <Bar data={armsData} options={barOptions} />
+          </div>
+        )}
+        {requisitionData.labels.length > 0 && (
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <Pie data={requisitionData} options={pieOptions} />
+          </div>
+        )}
+      </div>
 
       {/* Recent Activity + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
