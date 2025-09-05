@@ -1,4 +1,4 @@
-import { inventoryApi, requisitionApi } from '../services/apiClient';
+import { inventoryApi, requisitionApi } from './apiClient';
 
 /**
  * Generates an inventory report.
