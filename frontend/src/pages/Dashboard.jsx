@@ -143,7 +143,7 @@ export default function Dashboard() {
 
         // Fetch all data concurrently using the API clients with manual auth headers
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/firearms/", {
+          inventoryApi.get("/api/arms/", {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
