@@ -48,7 +48,7 @@ const RecentActivity = ({ activities }) => (
   </div>
 );
 
-// Custom refresh token function that handles both 401 and 403
+// Custom refresh token function
 async function refreshAuthToken() {
   const refresh = localStorage.getItem("refresh_token");
   if (!refresh) {
@@ -117,7 +117,7 @@ export default function Dashboard() {
       });
       return response;
     } catch (error) {
-      // If we get 403 and have retries left, try to refresh token
+      // If we get 403/401 and have retries left, try to refresh token
       if (retry && (error.response?.status === 403 || error.response?.status === 401)) {
         console.log("Attempting token refresh due to authentication error");
         try {
@@ -139,21 +139,61 @@ export default function Dashboard() {
     }
   };
 
+  // Check if user is authenticated
+  const checkAuthentication = () => {
+    const accessToken = localStorage.getItem("access_token");
+    const refreshToken = localStorage.getItem("refresh_token");
+    
+    if (!accessToken || !refreshToken) {
+      return false;
+    }
+
+    // Basic token validation
+    try {
+      const tokenParts = accessToken.split('.');
+      if (tokenParts.length !== 3) {
+        return false;
+      }
+      
+      const payload = JSON.parse(atob(tokenParts[1]));
+      const currentTime = Date.now() / 1000;
+      
+      if (payload.exp && payload.exp < currentTime) {
+        console.log("Token expired, attempting refresh...");
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Token validation error:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        // Check if we have both tokens
-        const accessToken = localStorage.getItem("access_token");
-        const refreshToken = localStorage.getItem("refresh_token");
-        
-        if (!accessToken || !refreshToken) {
-          throw new Error("Authentication required. Please log in.");
+        // Check authentication first
+        if (!checkAuthentication()) {
+          // Try to refresh token if we have a refresh token but no valid access token
+          const refreshToken = localStorage.getItem("refresh_token");
+          if (refreshToken) {
+            try {
+              console.log("Attempting automatic token refresh...");
+              await refreshAuthToken();
+              // If refresh succeeds, continue with data fetching
+            } catch (refreshError) {
+              throw new Error("Session expired. Please log in again.");
+            }
+          } else {
+            throw new Error("Authentication required. Please log in.");
+          }
         }
 
-        console.log("Tokens found, attempting to fetch data...");
+        console.log("Authentication valid, fetching data...");
 
         // Fetch all data with enhanced authentication handling
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.allSettled([
@@ -169,11 +209,15 @@ export default function Dashboard() {
 
         if (failedRequests.length > 0) {
           const firstError = failedRequests[0].reason;
+          console.error("API request failed:", firstError);
+          
           if (firstError.message.includes("Authentication failed") || 
-              firstError.message.includes("No authentication")) {
+              firstError.message.includes("No authentication") ||
+              firstError.response?.status === 403 ||
+              firstError.response?.status === 401) {
             throw new Error("Authentication failed. Please log in again.");
           }
-          throw new Error("Failed to fetch some dashboard data");
+          throw new Error("Failed to fetch some dashboard data. Please try again.");
         }
 
         // Extract data from successful responses
@@ -252,8 +296,11 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         
-        if (err.message.includes("Authentication") || err.message.includes("log in")) {
+        if (err.message.includes("Authentication") || 
+            err.message.includes("log in") || 
+            err.message.includes("Session expired")) {
           setError(err.message);
+          // Clear tokens and redirect to login
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
           setTimeout(() => navigate('/login'), 2000);
