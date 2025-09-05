@@ -75,21 +75,25 @@ export default function Dashboard() {
       setError(null);
       try {
         // Fetch all data concurrently using the API clients
-        // Using more common REST API endpoints
+        // Using correct endpoints based on your API client configuration
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/firearms/"), // Changed from /dashboard/ to /firearms/
-          requisitionApi.get("/"), // Changed from /requisitions/ to /
-          api.get("/"), // Changed from /users/ to /
+          inventoryApi.get("/firearms/"), // Correct endpoint for inventory
+          requisitionApi.get("/requisitions/"), // Correct endpoint for requisitions
+          api.get("/users/"), // Correct endpoint for users
         ]);
 
         // --- Process Stats ---
-        const totalFirearms = inventoryRes.data.count || inventoryRes.data.length || 0;
+        // Handle different response structures (array vs paginated)
+        const firearmsData = inventoryRes.data.results || inventoryRes.data || [];
+        const totalFirearms = inventoryRes.data.count || firearmsData.length || 0;
         
-        const activeRequisitionsCount = Array.isArray(requisitionsRes.data) 
-          ? requisitionsRes.data.filter(req => req.status === "Pending").length
-          : 0;
+        const requisitionsData = requisitionsRes.data.results || requisitionsRes.data || [];
+        const activeRequisitionsCount = requisitionsData.filter(
+          (req) => req.status === "Pending" || req.status === "pending"
+        ).length;
 
-        const usersCount = usersRes.data.count || usersRes.data.length || 0;
+        const usersData = usersRes.data.results || usersRes.data || [];
+        const usersCount = usersRes.data.count || usersData.length || 0;
 
         setStats({
           totalArms: totalFirearms,
@@ -98,11 +102,10 @@ export default function Dashboard() {
         });
 
         // --- Process Arms Chart Data ---
-        // If the API doesn't provide type statistics, we'll calculate them
-        const firearms = inventoryRes.data.results || inventoryRes.data || [];
+        // Calculate type statistics from firearms data
         const typeCounts = {};
         
-        firearms.forEach(firearm => {
+        firearmsData.forEach(firearm => {
           const type = firearm.type || firearm.firearm_type || "Unknown";
           typeCounts[type] = (typeCounts[type] || 0) + 1;
         });
@@ -121,8 +124,7 @@ export default function Dashboard() {
         });
 
         // --- Process Requisition Chart Data ---
-        const requisitions = requisitionsRes.data.results || requisitionsRes.data || [];
-        const requisitionsByStatus = requisitions.reduce((acc, req) => {
+        const requisitionsByStatus = requisitionsData.reduce((acc, req) => {
           const status = req.status || "Unknown";
           acc[status] = (acc[status] || 0) + 1;
           return acc;
@@ -130,10 +132,15 @@ export default function Dashboard() {
         
         const statusColors = {
           Approved: "rgba(75, 192, 192, 0.6)",
+          approved: "rgba(75, 192, 192, 0.6)",
           Pending: "rgba(255, 206, 86, 0.6)",
+          pending: "rgba(255, 206, 86, 0.6)",
           Rejected: "rgba(255, 99, 132, 0.6)",
+          rejected: "rgba(255, 99, 132, 0.6)",
           Issued: "rgba(153, 102, 255, 0.6)",
+          issued: "rgba(153, 102, 255, 0.6)",
           Returned: "rgba(255, 159, 64, 0.6)",
+          returned: "rgba(255, 159, 64, 0.6)",
         };
 
         setRequisitionData({
@@ -150,7 +157,7 @@ export default function Dashboard() {
         });
 
         // --- Process Recent Activities ---
-        const sortedRequisitions = [...requisitions].sort(
+        const sortedRequisitions = [...requisitionsData].sort(
           (a, b) => new Date(b.created_at || b.date_created || 0) - new Date(a.created_at || a.date_created || 0)
         );
         setRecentActivities(sortedRequisitions.slice(0, 5));
@@ -164,19 +171,19 @@ export default function Dashboard() {
           setError("Failed to fetch dashboard data. Please try again later.");
         }
         
-        // Set fallback data for demo purposes
+        // Set fallback data for demo purposes (removed hardcoded values)
         setStats({
-          totalArms: 24,
-          activeRequisitions: 5,
-          registeredUsers: 12,
+          totalArms: 0,
+          activeRequisitions: 0,
+          registeredUsers: 0,
         });
         
         setArmsData({
-          labels: ["Rifle", "Pistol", "Shotgun"],
+          labels: [],
           datasets: [
             {
               label: "Number of Items",
-              data: [12, 8, 4],
+              data: [],
               backgroundColor: "rgba(53, 162, 235, 0.5)",
               borderColor: "rgb(53, 162, 235)",
               borderWidth: 1,
@@ -185,20 +192,17 @@ export default function Dashboard() {
         });
         
         setRequisitionData({
-          labels: ["Pending", "Approved", "Rejected"],
+          labels: [],
           datasets: [
             {
               label: "Requisitions",
-              data: [5, 8, 3],
-              backgroundColor: ["rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)", "rgba(255, 99, 132, 0.6)"],
+              data: [],
+              backgroundColor: [],
             },
           ],
         });
         
-        setRecentActivities([
-          { id: 1, firearm_type: "Rifle", status: "Pending", name: "John Doe", service_number: "12345", created_at: new Date() },
-          { id: 2, firearm_type: "Pistol", status: "Approved", name: "Jane Smith", service_number: "67890", created_at: new Date(Date.now() - 86400000) },
-        ]);
+        setRecentActivities([]);
       } finally {
         setIsLoading(false);
       }
@@ -235,7 +239,7 @@ export default function Dashboard() {
       {error && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
           <p>{error}</p>
-          <p className="text-sm mt-1">Showing demo data for preview.</p>
+          <p className="text-sm mt-1">Please ensure all backend services are running.</p>
         </div>
       )}
 
