@@ -1,44 +1,44 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// FIX: useNavigate is no longer needed here as the context handles it.
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../layouts/AuthLayout';
 import Button from '../components/Button';
 import { loginUser } from '../services/auth';
 
 export default function Login() {
-  const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError(null);
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-  const formData = new FormData(e.target);
-  const credentials = {
-    username: formData.get('username').trim(),
-    password: formData.get('password'),
+    const formData = new FormData(e.target);
+    const credentials = {
+      username: formData.get('username').trim(),
+      password: formData.get('password'),
+    };
+
+    try {
+      const response = await loginUser(credentials); // your API call
+      
+      // FIX: Check for 'access' token, which is the JWT standard.
+      if (!response?.access) {
+        throw new Error('Invalid server response. Login failed.');
+      }
+
+      // FIX: Call the context's login function with the entire response object.
+      // The context will handle extracting the tokens and user data.
+      login(response);
+
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred.');
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  try {
-    const response = await loginUser(credentials); // your API call
-    if (!response?.token) throw new Error('Invalid server response');
-
-    // Use the unified login
-    login({
-      username: credentials.username,
-      token: response.token,
-      user: response.user,
-    });
-
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
 
   return (
     <AuthLayout>
@@ -47,6 +47,8 @@ export default function Login() {
       {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       
       <form className="space-y-4" onSubmit={handleSubmit}>
+        {/* ... form inputs remain the same ... */}
+{/* ...existing code... */}
         <input
           name="username"
           type="text"

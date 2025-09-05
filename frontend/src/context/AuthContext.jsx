@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,24 +8,32 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check for token on initial load
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
-      // You can expand this to include user info from token
-      setUser({ token });
+      // For persistence, you can decode the token to get user info
+      // For now, setting a simple user object is enough to signify being logged in.
+      setUser({ isAuthenticated: true });
     }
     setLoading(false);
   }, []);
 
-  const login = (userData) => {
-    localStorage.setItem('access_token', userData.token);
-    setUser(userData);
+  // FIX: The login function now expects an object with 'access' and 'refresh' tokens.
+  const login = (authData) => {
+    // It also expects user details to be passed in separately.
+    const { access, refresh, user: userData } = authData;
+
+    localStorage.setItem('access_token', access);
+    localStorage.setItem('refresh_token', refresh);
+    
+    setUser(userData); // Set the actual user object in the state
     navigate('/dashboard');
   };
 
   const logout = () => {
     localStorage.removeItem('access_token');
+    // FIX: Also remove the refresh token on logout.
+    localStorage.removeItem('refresh_token');
     setUser(null);
     navigate('/login');
   };
