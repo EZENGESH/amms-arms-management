@@ -127,7 +127,7 @@ export default function Dashboard() {
 
         // Test authentication with a simple request first
         try {
-          const testResponse = await api.get("/api/users/me/", {
+          const testResponse = await api.get("/api/users/", {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
