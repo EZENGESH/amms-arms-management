@@ -27,4 +27,6 @@ router.register(r'requisitions', RequisitionViewSet, basename='requisitions')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    
+    
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

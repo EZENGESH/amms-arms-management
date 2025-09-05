@@ -5,6 +5,7 @@ from rest_framework.authtoken import views as token_views
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
+from users.views import UserDetailView
 
 # API router
 router = DefaultRouter()
@@ -40,6 +41,7 @@ urlpatterns = [
     
     # DRF browsable API login
     path('api-auth/', include('rest_framework.urls')),
+    path('api/auth/user/', views.UserDetailView.as_view(), name='user-detail'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
