@@ -19,7 +19,6 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
-      - ./user-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
       user-db:
@@ -37,7 +36,6 @@ services:
       - ./user-service/db.env
     ports:
       - "3311:3306"
-    
     volumes:
       - user-mysql-data:/var/lib/mysql
     networks:
@@ -67,7 +65,6 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
-      - ./inventory-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
       inventory-db:
@@ -115,7 +112,6 @@ services:
           python manage.py runserver 0.0.0.0:8000;
         fi"
     volumes:
-      - ./requisition-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
       requisition-db:
@@ -160,7 +156,6 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
-      - ./reporting-service:/app
       - staticfiles:/app/staticfiles
     depends_on:
       reporting-db:
@@ -182,7 +177,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -206,30 +201,32 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - user-service
-      - inventory-service
-      - requisition-service
-      - reporting-service
+      user-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      requisition-service:
+        condition: service_started
+      reporting-service:
+        condition: service_started
     networks:
       - backend
     restart: always
 
   # ========================
-  # Frontend
+  # Frontend (PRODUCTION SETUP - RECOMMENDED)
   # ========================
   frontend:
     build: 
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
-    command: npm run dev -- --host 0.0.0.0
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    command: sh -c "npm run dev -- --host 0.0.0.0 && tail -f /dev/null"
     ports:
       - "5173:5173"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_started
     networks:
       - backend
     restart: always

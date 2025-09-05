@@ -6,12 +6,11 @@ ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies required for mysqlclient
 RUN apt-get update && apt-get install -y \
-    gcc \
-    libmariadb-dev \
-    default-libmysqlclient-dev \
     pkg-config \
-    build-essential \
-    && apt-get clean
+    default-libmysqlclient-dev \
+    gcc \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app

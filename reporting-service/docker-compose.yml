@@ -6,7 +6,7 @@ services:
     container_name: reporting-db
     restart: always
     env_file:
-      - reporting-service/db.env
+      - db.env
     ports:
       - "3306:3306"
     volumes:
