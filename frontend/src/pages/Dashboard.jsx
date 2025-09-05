@@ -83,9 +83,9 @@ export default function Dashboard() {
         // Fetch all data concurrently using the API clients
         // Using correct endpoints without /api/ prefix since base URLs already point to the API
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/firearms/"), // Correct endpoint: /firearms/
-          requisitionApi.get("/requisitions/"), // Correct endpoint: /requisitions/
-          api.get("/users/"), // Correct endpoint: /users/
+          inventoryApi.get("/api/arms/"), // Correct endpoint: /firearms/
+          requisitionApi.get("/api/requisitions/"), // Correct endpoint: /requisitions/
+          api.get("/api/users/"), // Correct endpoint: /users/
         ]);
 
         // --- Process Stats ---
