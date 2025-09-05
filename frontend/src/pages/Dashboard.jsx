@@ -69,6 +69,17 @@ export default function Dashboard() {
     datasets: [{ label: "Requisitions", data: [] }],
   });
 
+  // Function to manually add auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("access_token");
+    return {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": "application/json",
+      },
+    };
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -82,20 +93,17 @@ export default function Dashboard() {
           throw new Error("No authentication tokens found. Please log in.");
         }
 
-        // Debug: Log tokens to check if they exist
-        console.log("Access Token:", token ? "Exists" : "Missing");
-        console.log("Refresh Token:", refreshToken ? "Exists" : "Missing");
+        console.log("Access Token exists:", !!token);
+        console.log("Refresh Token exists:", !!refreshToken);
 
-        // Fetch all data concurrently using the API clients
-        // Using correct endpoints with /api/ prefix
+        // Fetch all data concurrently using the API clients with manual auth headers
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/arms/"), // Correct endpoint with /api/ prefix
-          requisitionApi.get("/api/requisitions/"), // Correct endpoint with /api/ prefix
-          api.get("/api/users/"), // Correct endpoint with /api/ prefix
+          inventoryApi.get("/api/firearms/", getAuthHeaders()),
+          requisitionApi.get("/api/requisitions/", getAuthHeaders()),
+          api.get("/api/users/", getAuthHeaders()),
         ]);
 
         // --- Process Stats ---
-        // Handle different response structures (array vs paginated)
         const firearmsData = inventoryRes.data.results || inventoryRes.data || [];
         const totalFirearms = inventoryRes.data.count || firearmsData.length || 0;
         
@@ -114,7 +122,6 @@ export default function Dashboard() {
         });
 
         // --- Process Arms Chart Data ---
-        // Calculate type statistics from firearms data
         const typeCounts = {};
         
         firearmsData.forEach(firearm => {
@@ -177,7 +184,7 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         
-        if (err.response?.status === 403) {
+        if (err.response?.status === 403 || err.response?.status === 401) {
           setError("Authentication failed. Please log in again.");
           // Clear invalid tokens
           localStorage.removeItem("access_token");
