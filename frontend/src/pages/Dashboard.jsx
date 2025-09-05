@@ -157,7 +157,7 @@ export default function Dashboard() {
 
         // Fetch all data with enhanced authentication handling
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.allSettled([
-          makeAuthenticatedRequest(inventoryApi, "/api/firearms/"),
+          makeAuthenticatedRequest(inventoryApi, "/api/arms/"),
           makeAuthenticatedRequest(requisitionApi, "/api/requisitions/"),
           makeAuthenticatedRequest(api, "/api/users/"),
         ]);
