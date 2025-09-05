@@ -1,5 +1,5 @@
 // src/services/auth.js
-import api from './apiClient';
+import {api} from './apiClient';
 
 export const registerUser = async (userData) => {
   try {
