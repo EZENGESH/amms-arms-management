@@ -48,6 +48,37 @@ const RecentActivity = ({ activities }) => (
   </div>
 );
 
+// Custom refresh token function that handles both 401 and 403
+async function refreshAuthToken() {
+  const refresh = localStorage.getItem("refresh_token");
+  if (!refresh) {
+    throw new Error("No refresh token available");
+  }
+
+  try {
+    const response = await fetch("http://localhost:8001/api/auth/token/refresh/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Token refresh failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    localStorage.setItem("access_token", data.access);
+    return data.access;
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    throw error;
+  }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -69,46 +100,43 @@ export default function Dashboard() {
     datasets: [{ label: "Requisitions", data: [] }],
   });
 
-  // Function to manually add auth headers with token validation
-  const getAuthHeaders = () => {
+  // Enhanced API call function with token refresh and retry logic
+  const makeAuthenticatedRequest = async (apiInstance, endpoint, retry = true) => {
     const token = localStorage.getItem("access_token");
     
-    // Check if token exists and is valid (not expired)
     if (!token) {
-      console.error("No access token found in localStorage");
-      throw new Error("Authentication required. Please log in.");
-    }
-    
-    // Basic token validation (you might want to add JWT expiration check)
-    try {
-      const tokenParts = token.split('.');
-      if (tokenParts.length !== 3) {
-        throw new Error("Invalid token format");
-      }
-      
-      const payload = JSON.parse(atob(tokenParts[1]));
-      const currentTime = Date.now() / 1000;
-      
-      if (payload.exp && payload.exp < currentTime) {
-        console.error("Token has expired");
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        throw new Error("Token expired. Please log in again.");
-      }
-      
-    } catch (err) {
-      console.error("Token validation failed:", err);
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      throw new Error("Invalid authentication token. Please log in again.");
+      throw new Error("No authentication token found");
     }
 
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    };
+    try {
+      const response = await apiInstance.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      return response;
+    } catch (error) {
+      // If we get 403 and have retries left, try to refresh token
+      if (retry && (error.response?.status === 403 || error.response?.status === 401)) {
+        console.log("Attempting token refresh due to authentication error");
+        try {
+          const newToken = await refreshAuthToken();
+          // Retry the request with new token
+          const retryResponse = await apiInstance.get(endpoint, {
+            headers: {
+              Authorization: `Bearer ${newToken}`,
+              "Content-Type": "application/json",
+            },
+          });
+          return retryResponse;
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+          throw new Error("Authentication failed. Please log in again.");
+        }
+      }
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -117,63 +145,48 @@ export default function Dashboard() {
       setError(null);
       
       try {
-        // Check authentication status first
-        const token = localStorage.getItem("access_token");
-        if (!token) {
-          throw new Error("Please log in to access the dashboard.");
+        // Check if we have both tokens
+        const accessToken = localStorage.getItem("access_token");
+        const refreshToken = localStorage.getItem("refresh_token");
+        
+        if (!accessToken || !refreshToken) {
+          throw new Error("Authentication required. Please log in.");
         }
 
-        console.log("Access Token exists, attempting to fetch data...");
+        console.log("Tokens found, attempting to fetch data...");
 
-        // Test authentication with a simple request first
-        try {
-          const testResponse = await api.get("/api/users/", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          console.log("Authentication test successful:", testResponse.status);
-        } catch (testError) {
-          console.error("Authentication test failed:", testError);
-          if (testError.response?.status === 403 || testError.response?.status === 401) {
-            throw new Error("Authentication failed. Token may be invalid or expired.");
-          }
-        }
-
-        // Fetch all data concurrently using the API clients with manual auth headers
-        const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/arms/", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }),
-          requisitionApi.get("/api/requisitions/", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }),
-          api.get("/api/users/", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }),
+        // Fetch all data with enhanced authentication handling
+        const [inventoryRes, requisitionsRes, usersRes] = await Promise.allSettled([
+          makeAuthenticatedRequest(inventoryApi, "/api/firearms/"),
+          makeAuthenticatedRequest(requisitionApi, "/api/requisitions/"),
+          makeAuthenticatedRequest(api, "/api/users/"),
         ]);
 
+        // Check for any failed requests
+        const failedRequests = [inventoryRes, requisitionsRes, usersRes].filter(
+          result => result.status === 'rejected'
+        );
+
+        if (failedRequests.length > 0) {
+          const firstError = failedRequests[0].reason;
+          if (firstError.message.includes("Authentication failed") || 
+              firstError.message.includes("No authentication")) {
+            throw new Error("Authentication failed. Please log in again.");
+          }
+          throw new Error("Failed to fetch some dashboard data");
+        }
+
+        // Extract data from successful responses
+        const inventoryData = inventoryRes.value.data.results || inventoryRes.value.data || [];
+        const requisitionsData = requisitionsRes.value.data.results || requisitionsRes.value.data || [];
+        const usersData = usersRes.value.data.results || usersRes.value.data || [];
+
         // --- Process Stats ---
-        const firearmsData = inventoryRes.data.results || inventoryRes.data || [];
-        const totalFirearms = inventoryRes.data.count || firearmsData.length || 0;
-        
-        const requisitionsData = requisitionsRes.data.results || requisitionsRes.data || [];
+        const totalFirearms = inventoryRes.value.data.count || inventoryData.length || 0;
         const activeRequisitionsCount = requisitionsData.filter(
           (req) => req.status === "Pending" || req.status === "pending"
         ).length;
-
-        const usersData = usersRes.data.results || usersRes.data || [];
-        const usersCount = usersRes.data.count || usersData.length || 0;
+        const usersCount = usersRes.value.data.count || usersData.length || 0;
 
         setStats({
           totalArms: totalFirearms,
@@ -183,8 +196,7 @@ export default function Dashboard() {
 
         // --- Process Arms Chart Data ---
         const typeCounts = {};
-        
-        firearmsData.forEach(firearm => {
+        inventoryData.forEach(firearm => {
           const type = firearm.type || firearm.firearm_type || "Unknown";
           typeCounts[type] = (typeCounts[type] || 0) + 1;
         });
@@ -216,10 +228,6 @@ export default function Dashboard() {
           pending: "rgba(255, 206, 86, 0.6)",
           Rejected: "rgba(255, 99, 132, 0.6)",
           rejected: "rgba(255, 99, 132, 0.6)",
-          Issued: "rgba(153, 102, 255, 0.6)",
-          issued: "rgba(153, 102, 255, 0.6)",
-          Returned: "rgba(255, 159, 64, 0.6)",
-          returned: "rgba(255, 159, 64, 0.6)",
         };
 
         setRequisitionData({
@@ -244,21 +252,11 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         
-        if (err.response?.status === 403 || err.response?.status === 401) {
-          setError("Authentication failed. Please log in again.");
-          // Clear invalid tokens
+        if (err.message.includes("Authentication") || err.message.includes("log in")) {
+          setError(err.message);
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
-          // Redirect to login if authentication fails
           setTimeout(() => navigate('/login'), 2000);
-        } else if (err.message?.includes("Authentication required") || 
-                   err.message?.includes("Please log in") ||
-                   err.message?.includes("Token expired") ||
-                   err.message?.includes("Invalid authentication")) {
-          setError(err.message);
-          setTimeout(() => navigate('/login'), 2000);
-        } else if (err.response?.status === 404) {
-          setError("API endpoints not found. Please check if the backend services are running.");
         } else {
           setError("Failed to fetch dashboard data. Please try again later.");
         }
