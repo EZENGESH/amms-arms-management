@@ -11,6 +11,7 @@ For production, set DJANGO_DEBUG=False and configure these environment variables
 from pathlib import Path
 from decouple import config, Csv
 import os
+from datetime import timedelta   # ✅ Added for JWT lifetimes
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,7 +36,9 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     X_FRAME_OPTIONS = 'DENY'
 
-# Application definition
+# ========================
+# APPLICATION DEFINITION
+# ========================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -46,6 +49,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',   # ✅ Added for JWT support
     'django_celery_results',
     'django_celery_beat',
     'corsheaders',
@@ -102,21 +106,10 @@ DATABASES = {
 # AUTHENTICATION
 # ========================
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -137,7 +130,6 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-
 # ========================
 # DEFAULT PRIMARY KEY
 # ========================
@@ -152,15 +144,9 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
-
-# Task result expiry
 CELERY_RESULT_EXPIRES = 3600
-
-# Worker settings
 CELERY_WORKER_PREFETCH_MULTIPLIER = 4
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
-
-# Beat settings
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # ========================
@@ -169,7 +155,8 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.TokenAuthentication',  # legacy support
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # ✅ JWT
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -197,9 +184,21 @@ REST_FRAMEWORK = {
 }
 
 # ========================
+# SIMPLE JWT CONFIGURATION
+# ========================
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}
+
+# ========================
 # CORS SETTINGS
 # ========================
-CORS_ALLOW_ALL_ORIGINS = True  # Only allow all origins in debug mode
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
@@ -223,30 +222,18 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
+CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
 
 # ========================
 # SECURITY SETTINGS
 # ========================
 if not DEBUG:
-    # Production security settings
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_REFERRER_POLICY = 'same-origin'
-    
-    # HTTPS settings
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    
-    # HSTS settings
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
@@ -272,9 +259,9 @@ SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_SAVE_EVERY_REQUEST = True
 
 # ========================
-# EMAIL CONFIGURATION (for future use)
+# EMAIL CONFIGURATION
 # ========================
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 if not DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')

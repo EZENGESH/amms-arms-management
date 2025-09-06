@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 
-# Correctly import models and serializers from the 'users' app
+# Import models and serializers from the 'users' app
 from .models import Registration
 from .serializers import (
     CustomUserSerializer, UserSerializer, UserProfileSerializer,
@@ -19,6 +19,7 @@ User = get_user_model()
 
 class ApiRoot(APIView):
     permission_classes = [AllowAny]
+
     def get(self, request):
         return Response({"message": "User Service API", "version": "1.0.0"})
 
@@ -47,6 +48,7 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
         request.auth.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -70,9 +72,18 @@ class UserListView(generics.ListAPIView):
     permission_classes = [IsAdminUser]
 
 
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+
 class UserProfileView(generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
+
     def get_object(self):
         return self.request.user
 
@@ -80,8 +91,31 @@ class UserProfileView(generics.RetrieveAPIView):
 class UpdateProfileView(generics.UpdateAPIView):
     serializer_class = UpdateProfileSerializer
     permission_classes = [IsAuthenticated]
+
     def get_object(self):
         return self.request.user
+
+
+class UserUpdateView(generics.UpdateAPIView):
+    """
+    Allows admins to update any user details by ID.
+    Example: PATCH /api/users/<id>/update/
+    """
+    queryset = User.objects.all()
+    serializer_class = UpdateProfileSerializer
+    permission_classes = [IsAdminUser]
+    lookup_field = "pk"
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)  # allow PATCH by default
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            "message": f"User {instance.username} updated successfully",
+            "user": serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 class RegistrationAPIView(generics.CreateAPIView):
@@ -98,11 +132,12 @@ class RegistrationListView(generics.ListAPIView):
 
 class RegistrationApproveView(APIView):
     permission_classes = [IsAdminUser]
+
     def post(self, request, pk):
         registration = get_object_or_404(Registration, pk=pk)
         if registration.is_approved:
             return Response({'error': 'This registration is already approved'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         user_data = {
             'username': registration.username,
             'email': registration.email,
@@ -110,9 +145,9 @@ class RegistrationApproveView(APIView):
             'last_name': registration.last_name,
             'service_number': registration.service_number,
             'rank': registration.rank,
-            'password': registration.password_raw 
+            'password': registration.password_raw
         }
-        
+
         user_serializer = CustomUserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
@@ -128,16 +163,17 @@ class RegistrationApproveView(APIView):
 
 class RegistrationRejectView(APIView):
     permission_classes = [IsAdminUser]
+
     def post(self, request, pk):
         registration = get_object_or_404(Registration, pk=pk)
         if registration.is_approved:
             return Response({'error': 'This registration is already approved'}, status=status.HTTP_400_BAD_REQUEST)
         registration.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class UserDetailView(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(self, request, *args, **kwargs):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+class UserRetrieveDeleteView(generics.RetrieveDestroyAPIView):
+    """
+    Admin-only: Retrieve a single user by ID or delete them.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
