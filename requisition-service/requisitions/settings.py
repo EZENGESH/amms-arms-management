@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'requisition_service',
+    'requisitions',
     'corsheaders',
     'rest_framework.authtoken',
 ]
@@ -53,7 +53,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'requisition_service.authentication.UserServiceAuthentication',
+        'requisitions.authentication.UserServiceAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
