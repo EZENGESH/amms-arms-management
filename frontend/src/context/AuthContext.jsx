@@ -9,30 +9,49 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token'); // Use a consistent key
+    // Use consistent key names
+    const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    
     if (token) {
-      // In a real app, you might fetch user details using the token
-      setUser({ token });
+      // You might want to validate the token or fetch user details
+      setUser({ token, refreshToken });
     }
     setLoading(false);
   }, []);
 
-  // FIX: The login function now handles the response from DRF's authtoken
   const login = (authData) => {
-    // authData is the object from the API: { token, user_id, username }
-    localStorage.setItem('auth_token', authData.token);
-    setUser({ id: authData.user_id, username: authData.username });
+    // Store both tokens with consistent keys
+    localStorage.setItem('access_token', authData.token);
+    if (authData.refresh_token) {
+      localStorage.setItem('refresh_token', authData.refresh_token);
+    }
+    
+    setUser({ 
+      token: authData.token,
+      refreshToken: authData.refresh_token,
+      id: authData.user_id, 
+      username: authData.username 
+    });
     navigate('/dashboard');
   };
 
   const logout = () => {
-    localStorage.removeItem('auth_token');
+    // Remove all tokens consistently
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     setUser(null);
     navigate('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      isAuthenticated: !!user 
+    }}>
       {children}
     </AuthContext.Provider>
   );

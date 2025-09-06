@@ -23,15 +23,27 @@ export default function Login() {
     try {
       const response = await loginUser(credentials);
       
-      // FIX: Check for 'token' which is what your backend provides.
+      // Check for token in response
       if (!response?.token) {
         throw new Error('Invalid server response. Login failed.');
       }
 
-      // FIX: Call the context's login function with the entire response object.
-      login(response);
+      // DEBUG: Log the response to see its structure
+      console.log('Login response:', response);
+
+      // Extract the expected fields for the AuthContext login function
+      const authData = {
+        token: response.token,
+        refresh_token: response.refresh_token || response.refreshToken,
+        user_id: response.user_id || response.userId || response.id,
+        username: response.username || credentials.username
+      };
+
+      // Call the context's login function with the formatted data
+      login(authData);
 
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
@@ -42,7 +54,11 @@ export default function Login() {
     <AuthLayout>
       <h1 className="text-xl font-semibold mb-4">Login to AMMS</h1>
       
-      {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+          {error}
+        </div>
+      )}
       
       <form className="space-y-4" onSubmit={handleSubmit}>
         <input
@@ -50,7 +66,7 @@ export default function Login() {
           type="text"
           placeholder="Username"
           required
-          className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
         <input
@@ -58,13 +74,24 @@ export default function Login() {
           type="password"
           placeholder="Password"
           required
-          className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
-        <Button type="submit" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="w-full"
+        >
           {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
+
+      {/* Debug info - remove in production */}
+      <div className="mt-6 p-3 bg-gray-100 rounded text-xs">
+        <p className="font-semibold">Debug Info:</p>
+        <p>Expected response: token, refresh_token, user_id, username</p>
+        <p>Check browser console for detailed response structure</p>
+      </div>
     </AuthLayout>
   );
 }
