@@ -1,3 +1,4 @@
+// src/pages/Login.jsx
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../layouts/AuthLayout';
@@ -23,26 +24,20 @@ export default function Login() {
     try {
       const response = await loginUser(credentials);
 
-      // Debugging
       console.log("Login response:", response);
 
-      // Adjust for your backend format
-      if (!response?.token || !response?.refresh_token) {
-        throw new Error("Invalid server response. Login failed.");
-      }
-
+      // Map backend response to authData
       const authData = {
-        token: response.token,                  // Access token
-        refresh_token: response.refresh_token, // Refresh token
+        token: response.token,               // access token from backend
+        refresh_token: response.refresh_token,
         user_id: response.user_id,
         username: response.username,
         email: response.email,
-        service_number: response.service_number || null,
-        rank: response.rank || null,
+        service_number: response.service_number,
+        rank: response.rank,
       };
 
-      // Save in context
-      login(authData);
+      login(authData); // AuthContext handles saving and redirect to dashboard
 
     } catch (err) {
       console.error("Login error:", err);
@@ -91,7 +86,7 @@ export default function Login() {
       {/* Debug info */}
       <div className="mt-6 p-3 bg-gray-100 rounded text-xs">
         <p className="font-semibold">Debug Info:</p>
-        <p>Expected response from backend:</p>
+        <p>Expected backend response:</p>
         <pre>{`{
   "token": "JWT_ACCESS_TOKEN",
   "refresh_token": "JWT_REFRESH_TOKEN",
