@@ -36,6 +36,18 @@ const logfirearmapi = axios.create({
 });
 
 // ==============================
+// Helper: force logout
+// ==============================
+const forceLogout = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
+  }
+};
+
+// ==============================
 // Interceptors
 // ==============================
 
@@ -53,7 +65,7 @@ const addTokenInterceptor = (instance) => {
   );
 };
 
-// 2. Handle expired access tokens with refresh logic
+// 2. Handle expired tokens with refresh logic
 const addRefreshInterceptor = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
@@ -66,25 +78,26 @@ const addRefreshInterceptor = (instance) => {
         try {
           const refreshToken = localStorage.getItem("refresh_token");
           if (!refreshToken) {
-            console.error("No refresh token available. User must log in again.");
+            console.error("No refresh token available. Logging out...");
+            forceLogout();
             return Promise.reject(error);
           }
 
-          // Correct refresh endpoint (matches Django)
-          const response = await axios.post(`${USER_API_BASE_URL}/api/auth/token/refresh/`, {
-            refresh: refreshToken,
-          });
+          // Request new access token
+          const response = await axios.post(
+            `${USER_API_BASE_URL}/api/auth/token/refresh/`,
+            { refresh: refreshToken }
+          );
 
           const newAccessToken = response.data.access;
           localStorage.setItem("access_token", newAccessToken);
 
-          // Retry the original request with new token
+          // Retry the original request
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return instance.request(originalRequest);
+          return instance(originalRequest);
         } catch (refreshError) {
-          console.error("Token refresh failed:", refreshError);
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
+          console.error("Token refresh failed. Logging out...");
+          forceLogout();
           return Promise.reject(refreshError);
         }
       }
@@ -94,7 +107,7 @@ const addRefreshInterceptor = (instance) => {
   );
 };
 
-// 3. Generic error logging
+// 3. Error logging
 const addErrorLoggingInterceptor = (instance, serviceName) => {
   instance.interceptors.response.use(
     (response) => response,
