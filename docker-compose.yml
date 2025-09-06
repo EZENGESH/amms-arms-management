@@ -19,6 +19,7 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     volumes:
+      - .:/app
       - staticfiles:/app/staticfiles
     depends_on:
       user-db:
