@@ -26,19 +26,19 @@ export default function Login() {
       // Debugging
       console.log("Login response:", response);
 
-      // ✅ Match Django SimpleJWT format
-      if (!response?.access || !response?.refresh) {
+      // Adjust for your backend format
+      if (!response?.token || !response?.refresh_token) {
         throw new Error("Invalid server response. Login failed.");
       }
 
       const authData = {
-        token: response.access,               // Access token (short-lived)
-        refresh_token: response.refresh,      // Refresh token
-        user_id: response?.user?.id,          // User object comes from serializer
-        username: response?.user?.username,
-        email: response?.user?.email,
-        service_number: response?.user?.service_number,
-        rank: response?.user?.rank,
+        token: response.token,                  // Access token
+        refresh_token: response.refresh_token, // Refresh token
+        user_id: response.user_id,
+        username: response.username,
+        email: response.email,
+        service_number: response.service_number || null,
+        rank: response.rank || null,
       };
 
       // Save in context
@@ -93,15 +93,13 @@ export default function Login() {
         <p className="font-semibold">Debug Info:</p>
         <p>Expected response from backend:</p>
         <pre>{`{
-  "access": "JWT_ACCESS_TOKEN",
-  "refresh": "JWT_REFRESH_TOKEN",
-  "user": {
-    "id": 1,
-    "username": "john",
-    "email": "john@example.com",
-    "service_number": "12345",
-    "rank": "Officer"
-  }
+  "token": "JWT_ACCESS_TOKEN",
+  "refresh_token": "JWT_REFRESH_TOKEN",
+  "user_id": 1,
+  "username": "admin",
+  "email": "admin@gmail.com",
+  "service_number": "12345",
+  "rank": "Officer"
 }`}</pre>
       </div>
     </AuthLayout>
