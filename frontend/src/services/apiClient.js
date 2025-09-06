@@ -3,45 +3,19 @@ import axios from "axios";
 // ==============================
 // Base URLs for microservices
 // ==============================
-const USER_API_BASE_URL = "http://localhost:8001";
-const INVENTORY_API_BASE_URL = "http://localhost:8009";
-const REQUISITION_API_BASE_URL = "http://localhost:8003";
-const FIREARM_LOG_API_BASE_URL = "http://localhost:8009";
+const SERVICES = {
+  user: "http://localhost:8001",
+  inventory: "http://localhost:8009",
+  requisition: "http://localhost:8003",
+  firearmLog: "http://localhost:8009",
+};
 
 // ==============================
-// Axios instances per service
-// ==============================
-const api = axios.create({
-  baseURL: USER_API_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  timeout: 10000,
-});
-
-const inventoryApi = axios.create({
-  baseURL: INVENTORY_API_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  timeout: 10000,
-});
-
-const requisitionApi = axios.create({
-  baseURL: REQUISITION_API_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  timeout: 10000,
-});
-
-const logfirearmapi = axios.create({
-  baseURL: FIREARM_LOG_API_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  timeout: 10000,
-});
-
-// ==============================
-// Helper: force logout
+// Force logout helper
 // ==============================
 const forceLogout = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
-
   if (window.location.pathname !== "/login") {
     window.location.href = "/login";
   }
@@ -51,7 +25,7 @@ const forceLogout = () => {
 // Interceptors
 // ==============================
 
-// 1. Attach JWT token to every request
+// Attach JWT token to requests
 const addTokenInterceptor = (instance) => {
   instance.interceptors.request.use(
     (config) => {
@@ -65,29 +39,27 @@ const addTokenInterceptor = (instance) => {
   );
 };
 
-// 2. Handle expired tokens with refresh logic
+// Refresh token interceptor
 const addRefreshInterceptor = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
         try {
           const refreshToken = localStorage.getItem("refresh_token");
           if (!refreshToken) {
-            console.error("No refresh token available. Logging out...");
+            console.error("No refresh token found. Logging out...");
             forceLogout();
             return Promise.reject(error);
           }
 
           // Request new access token
-          const response = await axios.post(
-            `${USER_API_BASE_URL}/api/auth/token/refresh/`,
-            { refresh: refreshToken }
-          );
+          const response = await axios.post(`${SERVICES.user}/api/auth/token/refresh/`, {
+            refresh: refreshToken,
+          });
 
           const newAccessToken = response.data.access;
           localStorage.setItem("access_token", newAccessToken);
@@ -101,13 +73,12 @@ const addRefreshInterceptor = (instance) => {
           return Promise.reject(refreshError);
         }
       }
-
       return Promise.reject(error);
     }
   );
 };
 
-// 3. Error logging
+// Error logging interceptor
 const addErrorLoggingInterceptor = (instance, serviceName) => {
   instance.interceptors.response.use(
     (response) => response,
@@ -116,7 +87,7 @@ const addErrorLoggingInterceptor = (instance, serviceName) => {
         console.error(`${serviceName} Service: Network Error or service is down.`);
       } else {
         console.error(
-          `${serviceName} Service Error: ${error.response.status} on ${error.config.url}`,
+          `${serviceName} Service Error: ${error.response.status} ${error.config.method.toUpperCase()} ${error.config.url}`,
           error.response.data
         );
       }
@@ -126,21 +97,32 @@ const addErrorLoggingInterceptor = (instance, serviceName) => {
 };
 
 // ==============================
-// Apply Interceptors
+// Create Axios instances dynamically
 // ==============================
-const allInstances = [api, inventoryApi, requisitionApi, logfirearmapi];
+const createServiceInstance = (baseURL, serviceName) => {
+  const instance = axios.create({
+    baseURL,
+    headers: { "Content-Type": "application/json" },
+    timeout: 10000,
+  });
 
-allInstances.forEach((instance) => {
   addTokenInterceptor(instance);
   addRefreshInterceptor(instance);
-});
+  addErrorLoggingInterceptor(instance, serviceName);
 
-addErrorLoggingInterceptor(api, "User");
-addErrorLoggingInterceptor(inventoryApi, "Inventory");
-addErrorLoggingInterceptor(requisitionApi, "Requisition");
-addErrorLoggingInterceptor(logfirearmapi, "Firearm Log");
+  return instance;
+};
 
 // ==============================
-// Exports
+// Export all service instances
 // ==============================
-export { api, inventoryApi, requisitionApi, logfirearmapi };
+export const api = createServiceInstance(SERVICES.user, "User");
+export const inventoryApi = createServiceInstance(SERVICES.inventory, "Inventory");
+export const requisitionApi = createServiceInstance(SERVICES.requisition, "Requisition");
+export const logfirearmapi = createServiceInstance(SERVICES.firearmLog, "Firearm Log");
+export default {
+  api,
+  inventoryApi,
+  requisitionApi,
+  logfirearmapi
+};

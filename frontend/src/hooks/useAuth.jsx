@@ -5,33 +5,45 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  // FIX: Add a loading state to prevent race conditions
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-a
+
   useEffect(() => {
+    // Get token and user info from localStorage
     const token = localStorage.getItem('access_token');
-    if (token) {
-      // For now, we'll set a placeholder user.
-      // In a real app, you'd decode the token to get user info.
-      setUser({ token });
+    const storedUser = localStorage.getItem('user');
+
+    if (token && storedUser) {
+      setUser({ token, ...JSON.parse(storedUser) });
     }
-    // FIX: Set loading to false after checking for the token
+
     setLoading(false);
   }, []);
 
   const login = (userData) => {
+    // Save user info and token
     setUser(userData);
+    localStorage.setItem('access_token', userData.token);
+    localStorage.setItem(
+      'user',
+      JSON.stringify({
+        id: userData.user_id,
+        username: userData.username,
+        email: userData.email,
+        service_number: userData.service_number,
+        rank: userData.rank,
+      })
+    );
     navigate('/dashboard');
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
-  // FIX: Provide the loading state in the context value
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
@@ -41,7 +53,7 @@ a
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined || context === null) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

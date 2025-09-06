@@ -19,6 +19,7 @@ User = get_user_model()
 
 
 class ApiRoot(APIView):
+    """Root endpoint for the User Service API."""
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -29,8 +30,7 @@ class ApiRoot(APIView):
 
 class LoginView(TokenObtainPairView):
     """
-    Returns access and refresh tokens for valid user credentials
-    plus serialized user data.
+    Login endpoint returning access & refresh tokens plus user details.
     """
     serializer_class = LoginSerializer
 
@@ -38,36 +38,30 @@ class LoginView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
             user = User.objects.get(username=request.data["username"])
-            user_data = UserSerializer(user).data
-            response.data["user"] = user_data
+            response.data["user"] = UserSerializer(user).data
         return response
 
 
 class LogoutView(APIView):
-    """
-    Blacklists the refresh token (if using JWT blacklist).
-    """
+    """Blacklists the refresh token (requires JWT blacklist enabled)."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response({"error": "Refresh token is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
         try:
-            refresh_token = request.data.get("refresh")
-            if not refresh_token:
-                return Response(
-                    {"error": "Refresh token is required"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response(
-                {"message": "Successfully logged out"},
-                status=status.HTTP_205_RESET_CONTENT
-            )
+            return Response({"message": "Successfully logged out"},
+                            status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChangePasswordView(generics.GenericAPIView):
+    """Allows users to change their password."""
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
@@ -76,35 +70,36 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
-        return Response(
-            {'message': 'Password changed successfully'},
-            status=status.HTTP_200_OK
-        )
+        return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
 
 class UserDetailView(APIView):
+    """Get the currently logged-in user's details."""
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
 
-# --- User Management ---
+# --- User Management Views ---
 
 class RegisterView(generics.CreateAPIView):
+    """Register a new user."""
     queryset = User.objects.all()
-    permission_classes = [AllowAny]
     serializer_class = CustomUserSerializer
+    permission_classes = [AllowAny]
 
 
 class UserListView(generics.ListAPIView):
+    """List all active users (Admin only)."""
     queryset = User.objects.filter(is_active=True).order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
 
 
 class UserProfileView(generics.RetrieveAPIView):
+    """Retrieve profile of the logged-in user."""
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -113,6 +108,7 @@ class UserProfileView(generics.RetrieveAPIView):
 
 
 class UpdateProfileView(generics.UpdateAPIView):
+    """Update profile of the logged-in user."""
     serializer_class = UpdateProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -121,10 +117,7 @@ class UpdateProfileView(generics.UpdateAPIView):
 
 
 class UserUpdateView(generics.UpdateAPIView):
-    """
-    Allows admins to update any user details by ID.
-    Example: PATCH /api/users/<id>/update/
-    """
+    """Admin: Update any user by ID."""
     queryset = User.objects.all()
     serializer_class = UpdateProfileSerializer
     permission_classes = [IsAdminUser]
@@ -143,9 +136,7 @@ class UserUpdateView(generics.UpdateAPIView):
 
 
 class UserRetrieveDeleteView(generics.RetrieveDestroyAPIView):
-    """
-    Admin-only: Retrieve a single user by ID or delete them.
-    """
+    """Admin: Retrieve or delete a user by ID."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
@@ -154,29 +145,29 @@ class UserRetrieveDeleteView(generics.RetrieveDestroyAPIView):
 # --- Registration Flow ---
 
 class RegistrationAPIView(generics.CreateAPIView):
+    """Submit a registration request."""
     queryset = Registration.objects.all()
-    permission_classes = [AllowAny]
     serializer_class = RegistrationSerializer
+    permission_classes = [AllowAny]
 
 
 class RegistrationListView(generics.ListAPIView):
+    """List all registrations (Admin only)."""
     queryset = Registration.objects.all().order_by('-created_at')
     serializer_class = RegistrationSerializer
     permission_classes = [IsAdminUser]
 
 
 class RegistrationApproveView(APIView):
+    """Admin: Approve a registration and create a user."""
     permission_classes = [IsAdminUser]
 
     def post(self, request, pk):
         registration = get_object_or_404(Registration, pk=pk)
         if registration.is_approved:
-            return Response(
-                {'error': 'This registration is already approved'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Already approved'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_data = {
+        user_serializer = CustomUserSerializer(data={
             'username': registration.username,
             'email': registration.email,
             'first_name': registration.first_name,
@@ -184,33 +175,26 @@ class RegistrationApproveView(APIView):
             'service_number': registration.service_number,
             'rank': registration.rank,
             'password': registration.password_raw
-        }
+        })
 
-        user_serializer = CustomUserSerializer(data=user_data)
         if user_serializer.is_valid():
             user = user_serializer.save()
             registration.is_approved = True
             registration.save()
             return Response({
-                'message': f'Registration for {registration.username} approved and user created',
+                'message': f'Registration approved for {registration.username}',
                 'user_id': user.id
             }, status=status.HTTP_201_CREATED)
-        else:
-            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RegistrationRejectView(APIView):
+    """Admin: Reject and delete a registration request."""
     permission_classes = [IsAdminUser]
 
     def post(self, request, pk):
         registration = get_object_or_404(Registration, pk=pk)
         if registration.is_approved:
-            return Response(
-                {'error': 'This registration is already approved'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Already approved'}, status=status.HTTP_400_BAD_REQUEST)
         registration.delete()
-        return Response(
-            {"message": "Registration rejected and deleted"},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response({'message': 'Registration rejected and deleted'}, status=status.HTTP_204_NO_CONTENT)

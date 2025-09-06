@@ -1,5 +1,4 @@
-// src/pages/Login.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../layouts/AuthLayout';
 import Button from '../components/Button';
@@ -7,45 +6,35 @@ import { loginUser } from '../services/auth';
 
 export default function Login() {
   const { login, user } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Already logged in? Redirect immediately
-  if (user) {
-    window.location.href = '/dashboard';
-    return null;
-  }
+  useEffect(() => {
+    if (user) window.location.href = '/dashboard';
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    const formData = new FormData(e.target);
-    const credentials = {
-      username: formData.get('username').trim(),
-      password: formData.get('password'),
-    };
-
     try {
-      const response = await loginUser(credentials);
-      console.log('Login response:', response);
-
-      // Ensure response has the expected fields
+      const response = await loginUser({ username, password });
       if (!response.token) throw new Error('No access token received from backend');
 
       const authData = {
-        token: response.token || response.access_token,
-        refresh_token: response.refresh_token || response.refreshToken,
-        user_id: response.user_id || response.id,
+        token: response.token,
+        refresh_token: response.refresh_token,
+        user_id: response.user_id,
         username: response.username,
         email: response.email,
         service_number: response.service_number,
         rank: response.rank,
       };
 
-      console.log('Mapped authData:', authData);
-      login(authData); // AuthContext handles saving and redirect
+      login(authData); // AuthContext handles storage and redirect
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'An unexpected error occurred.');
@@ -66,7 +55,8 @@ export default function Login() {
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <input
-          name="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           type="text"
           placeholder="Username"
           required
@@ -74,7 +64,8 @@ export default function Login() {
           disabled={isLoading}
         />
         <input
-          name="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           type="password"
           placeholder="Password"
           required
@@ -88,7 +79,6 @@ export default function Login() {
 
       <div className="mt-6 p-3 bg-gray-100 rounded text-xs">
         <p className="font-semibold">Debug Info:</p>
-        <p>Expected backend response:</p>
         <pre>{`{
   "token": "JWT_ACCESS_TOKEN",
   "refresh_token": "JWT_REFRESH_TOKEN",
