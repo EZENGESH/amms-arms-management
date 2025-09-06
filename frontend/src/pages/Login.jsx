@@ -6,9 +6,15 @@ import Button from '../components/Button';
 import { loginUser } from '../services/auth';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Already logged in? Redirect immediately
+  if (user) {
+    window.location.href = '/dashboard';
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,25 +29,26 @@ export default function Login() {
 
     try {
       const response = await loginUser(credentials);
+      console.log('Login response:', response);
 
-      console.log("Login response:", response);
+      // Ensure response has the expected fields
+      if (!response.token) throw new Error('No access token received from backend');
 
-      // Map backend response to authData
       const authData = {
-        token: response.token,               // access token from backend
-        refresh_token: response.refresh_token,
-        user_id: response.user_id,
+        token: response.token || response.access_token,
+        refresh_token: response.refresh_token || response.refreshToken,
+        user_id: response.user_id || response.id,
         username: response.username,
         email: response.email,
         service_number: response.service_number,
         rank: response.rank,
       };
 
-      login(authData); // AuthContext handles saving and redirect to dashboard
-
+      console.log('Mapped authData:', authData);
+      login(authData); // AuthContext handles saving and redirect
     } catch (err) {
-      console.error("Login error:", err);
-      setError(err.message || "An unexpected error occurred.");
+      console.error('Login error:', err);
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -74,16 +81,11 @@ export default function Login() {
           className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
-        <Button 
-          type="submit" 
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? "Logging in..." : "Login"}
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
 
-      {/* Debug info */}
       <div className="mt-6 p-3 bg-gray-100 rounded text-xs">
         <p className="font-semibold">Debug Info:</p>
         <p>Expected backend response:</p>
