@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import AuthLayout from '../layouts/AuthLayout';
-import Button from '../components/Button';
-import { loginUser } from '../services/auth';
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../layouts/AuthLayout";
+import Button from "../components/Button";
+import { loginUser } from "../services/auth";
 
 export default function Login() {
   const { login, user } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (user) window.location.href = '/dashboard';
+    if (user) return; // Already logged in, redirect handled by AuthProvider
   }, [user]);
 
   const handleSubmit = async (e) => {
@@ -22,22 +22,12 @@ export default function Login() {
 
     try {
       const response = await loginUser({ username, password });
-      if (!response.token) throw new Error('No access token received from backend');
+      if (!response.token) throw new Error("No access token received from backend");
 
-      const authData = {
-        token: response.token,
-        refresh_token: response.refresh_token,
-        user_id: response.user_id,
-        username: response.username,
-        email: response.email,
-        service_number: response.service_number,
-        rank: response.rank,
-      };
-
-      login(authData); // AuthContext handles storage and redirect
+      login(response); // AuthProvider handles storage and redirect
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'An unexpected error occurred.');
+      console.error("Login error:", err);
+      setError(err.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
@@ -73,22 +63,9 @@ export default function Login() {
           disabled={isLoading}
         />
         <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? 'Logging in...' : 'Login'}
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
       </form>
-
-      <div className="mt-6 p-3 bg-gray-100 rounded text-xs">
-        <p className="font-semibold">Debug Info:</p>
-        <pre>{`{
-  "token": "JWT_ACCESS_TOKEN",
-  "refresh_token": "JWT_REFRESH_TOKEN",
-  "user_id": 1,
-  "username": "admin",
-  "email": "admin@gmail.com",
-  "service_number": "12345",
-  "rank": "Officer"
-}`}</pre>
-      </div>
     </AuthLayout>
   );
 }
