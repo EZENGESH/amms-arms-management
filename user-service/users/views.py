@@ -24,6 +24,10 @@ class ApiRoot(APIView):
         return Response({"message": "User Service API", "version": "1.0.0"})
 
 
+# ----------------------
+# Authentication Views
+# ----------------------
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = [AllowAny]
@@ -39,8 +43,10 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.objects.get_or_create(user=user)
+
         return Response({
             'token': token.key,
+            'auth_token': token.key,  # alias for frontend
             'user_id': user.pk,
             'username': user.username
         }, status=status.HTTP_200_OK)
@@ -50,7 +56,8 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        request.auth.delete()
+        if request.auth:
+            request.auth.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -65,6 +72,10 @@ class ChangePasswordView(generics.GenericAPIView):
         request.user.save()
         return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
+
+# ----------------------
+# User Management
+# ----------------------
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.filter(is_active=True).order_by('id')
@@ -118,6 +129,19 @@ class UserUpdateView(generics.UpdateAPIView):
         }, status=status.HTTP_200_OK)
 
 
+class UserRetrieveDeleteView(generics.RetrieveDestroyAPIView):
+    """
+    Admin-only: Retrieve a single user by ID or delete them.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+
+
+# ----------------------
+# Registration Workflow
+# ----------------------
+
 class RegistrationAPIView(generics.CreateAPIView):
     queryset = Registration.objects.all()
     permission_classes = [AllowAny]
@@ -145,7 +169,7 @@ class RegistrationApproveView(APIView):
             'last_name': registration.last_name,
             'service_number': registration.service_number,
             'rank': registration.rank,
-            'password': registration.password_raw
+            'password': registration.password_raw  # handled in serializer -> set_password
         }
 
         user_serializer = CustomUserSerializer(data=user_data)
@@ -170,10 +194,3 @@ class RegistrationRejectView(APIView):
             return Response({'error': 'This registration is already approved'}, status=status.HTTP_400_BAD_REQUEST)
         registration.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-class UserRetrieveDeleteView(generics.RetrieveDestroyAPIView):
-    """
-    Admin-only: Retrieve a single user by ID or delete them.
-    """
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]

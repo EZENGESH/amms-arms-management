@@ -1,28 +1,51 @@
 import axios from "axios";
 
-// Base URLs for local development
+// ==============================
+// Base URLs for microservices
+// ==============================
 const USER_API_BASE_URL = "http://localhost:8001";
 const INVENTORY_API_BASE_URL = "http://localhost:8009";
 const REQUISITION_API_BASE_URL = "http://localhost:8003";
 const FIREARM_LOG_API_BASE_URL = "http://localhost:8009";
 
-// Create Axios instances
-const api = axios.create({ baseURL: USER_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
-const inventoryApi = axios.create({ baseURL: INVENTORY_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
-const requisitionApi = axios.create({ baseURL: REQUISITION_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
-const logfirearmapi = axios.create({ baseURL: FIREARM_LOG_API_BASE_URL, headers: { "Content-Type": "application/json" }, timeout: 10000 });
+// ==============================
+// Axios instances per service
+// ==============================
+const api = axios.create({
+  baseURL: USER_API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 10000,
+});
 
-// --- Interceptors ---
+const inventoryApi = axios.create({
+  baseURL: INVENTORY_API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 10000,
+});
 
-// 1. Attach token to every request
+const requisitionApi = axios.create({
+  baseURL: REQUISITION_API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 10000,
+});
+
+const logfirearmapi = axios.create({
+  baseURL: FIREARM_LOG_API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 10000,
+});
+
+// ==============================
+// Interceptors
+// ==============================
+
+// 1. Attach JWT token to every request
 const addTokenInterceptor = (instance) => {
   instance.interceptors.request.use(
     (config) => {
-      // Get the token from the key we set in AuthContext
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("access_token"); // JWT access token
       if (token) {
-        // DRF authtoken expects the "Token" keyword, not "Bearer".
-        config.headers.Authorization = `Token ${token}`;
+        config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     },
@@ -30,7 +53,49 @@ const addTokenInterceptor = (instance) => {
   );
 };
 
-// 2. Generic error logging
+// 2. Handle expired access tokens with refresh logic
+const addRefreshInterceptor = (instance) => {
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        try {
+          const refreshToken = localStorage.getItem("refresh_token");
+          if (!refreshToken) {
+            console.error("No refresh token available. User must log in again.");
+            return Promise.reject(error);
+          }
+
+          // Request new access token
+          const response = await axios.post(`${USER_API_BASE_URL}/auth/jwt/refresh/`, {
+            refresh: refreshToken,
+          });
+
+          const newAccessToken = response.data.access;
+          localStorage.setItem("access_token", newAccessToken);
+
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return instance(originalRequest);
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+          // Optionally clear tokens
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          return Promise.reject(refreshError);
+        }
+      }
+
+      return Promise.reject(error);
+    }
+  );
+};
+
+// 3. Generic error logging
 const addErrorLoggingInterceptor = (instance, serviceName) => {
   instance.interceptors.response.use(
     (response) => response,
@@ -48,19 +113,22 @@ const addErrorLoggingInterceptor = (instance, serviceName) => {
   );
 };
 
-// --- Apply Interceptors ---
-
-// Array of all client instances
+// ==============================
+// Apply Interceptors
+// ==============================
 const allInstances = [api, inventoryApi, requisitionApi, logfirearmapi];
 
-// Apply the token interceptor to all instances
-allInstances.forEach(addTokenInterceptor);
+allInstances.forEach((instance) => {
+  addTokenInterceptor(instance);
+  addRefreshInterceptor(instance);
+});
 
-// Apply specific error loggers
 addErrorLoggingInterceptor(api, "User");
 addErrorLoggingInterceptor(inventoryApi, "Inventory");
 addErrorLoggingInterceptor(requisitionApi, "Requisition");
 addErrorLoggingInterceptor(logfirearmapi, "Firearm Log");
 
-// --- Exports ---
+// ==============================
+// Exports
+// ==============================
 export { api, inventoryApi, requisitionApi, logfirearmapi };
