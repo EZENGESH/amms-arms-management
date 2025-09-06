@@ -5,7 +5,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from django.utils.translation import gettext_lazy as _
 
 # This should be the internal or external URL of your user service
-USER_SERVICE_VALIDATE_URL = 'http://localhost:8001/api/auth/user/'
+USER_SERVICE_VALIDATE_URL = 'http://user-service:8001/api/auth/user/'
 
 class UserServiceAuthentication(BaseAuthentication):
     """
