@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from django.conf import settings
 from django.conf.urls.static import static
 # FIX: Import views from the 'users' app, not the project directory '.'
-from users import views 
+from users_service import views 
 
 # API router - This is for ViewSets. Since you are using APIViews, it's currently empty.
 router = DefaultRouter()
