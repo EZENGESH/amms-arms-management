@@ -26,7 +26,7 @@ export default function Dashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
 
   const API_BASE_URL = {
-    users: "http://localhost:8001/api/users/",
+    users: "http://localhost:8001/api/users/profile/",
     inventory: "http://localhost:8009/api/arms/",
     requisitions: "http://localhost:8003/api/requisitions/",
   };
