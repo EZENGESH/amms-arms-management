@@ -1,5 +1,7 @@
 from django.contrib import admin
-from django.urls import path, include # Make sure include is imported
+from django.urls import path, include 
+from django.conf import settings
+# Make sure include is imported
 
 urlpatterns = [
     path('admin/', admin.site.urls),
