@@ -12,7 +12,6 @@ import {
   Legend,
 } from "chart.js";
 import Card from "../components/Card";
-// FIX: Import the central API clients. The interceptors in these clients will handle auth.
 import { api, inventoryApi, requisitionApi } from "../services/apiClient";
 
 // Register ChartJS components
@@ -26,6 +25,7 @@ ChartJS.register(
   Legend
 );
 
+// A sub-component to render recent activities
 const RecentActivity = ({ activities }) => (
   <div className="space-y-4">
     {activities.length > 0 ? (
@@ -34,7 +34,7 @@ const RecentActivity = ({ activities }) => (
           <div className="flex justify-between">
             <p className="font-medium">New Requisition: {activity.firearm_type}</p>
             <span className="text-sm text-gray-500">
-              {new Date(activity.created_at || activity.date_created).toLocaleDateString()}
+              {new Date(activity.created_at).toLocaleDateString()}
             </span>
           </div>
           <p className="text-sm text-gray-600">
@@ -58,11 +58,16 @@ export default function Dashboard() {
     registeredUsers: 0,
   });
   const [recentActivities, setRecentActivities] = useState([]);
-  const [armsData, setArmsData] = useState({ labels: [], datasets: [] });
-  const [requisitionData, setRequisitionData] = useState({ labels: [], datasets: [] });
 
-  // FIX: All custom auth logic (checkAuthentication, refreshAuthToken, makeAuthenticatedRequest) has been removed.
-  // We will rely on the apiClient's interceptors to handle tokens.
+  const [armsData, setArmsData] = useState({
+    labels: [],
+    datasets: [{ label: "Number of Items", data: [] }],
+  });
+
+  const [requisitionData, setRequisitionData] = useState({
+    labels: [],
+    datasets: [{ label: "Requisitions", data: [] }],
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,39 +75,98 @@ export default function Dashboard() {
       setError(null);
       
       try {
-        // FIX: Use Promise.all with the central API clients directly.
-        const [inventoryRes, requisitionsRes, usersRes] = await Promise.all([
-          inventoryApi.get("/api/arms/"),
-          requisitionApi.get("/api/requisitions/"),
-          api.get("/api/users/"),
+        // Check if user is authenticated
+        const token = localStorage.getItem("access_token");
+        const refreshToken = localStorage.getItem("refresh_token");
+        
+        if (!token || !refreshToken) {
+          throw new Error("Authentication required. Please log in.");
+        }
+
+        console.log("Authentication tokens found, fetching data...");
+
+        // Use Promise.allSettled to handle partial failures gracefully
+        const [inventoryRes, requisitionsRes, usersRes] = await Promise.allSettled([
+          // Try to fetch inventory data
+          inventoryApi.get("/api/firearms/").catch(error => {
+            console.warn("Inventory API failed:", error.message);
+            return { data: { results: [], count: 0 } };
+          }),
+          
+          // Try to fetch requisitions data (this might fail due to service communication issues)
+          requisitionApi.get("/api/requisitions/").catch(error => {
+            console.warn("Requisition API failed - service communication issue:", error.message);
+            return { data: { results: [], count: 0 } };
+          }),
+          
+          // Try to fetch users data
+          api.get("/api/users/").catch(error => {
+            console.warn("Users API failed:", error.message);
+            return { data: { results: [], count: 0 } };
+          }),
         ]);
 
-        // Extract data, handling potential pagination from Django REST Framework
-        const inventoryData = inventoryRes.data.results || inventoryRes.data || [];
-        const requisitionsData = requisitionsRes.data.results || requisitionsRes.data || [];
-        const usersData = usersRes.data.results || usersRes.data || [];
+        // Check if we have any critical authentication errors
+        const authErrors = [inventoryRes, requisitionsRes, usersRes].filter(
+          result => result.status === 'rejected' && 
+          (result.reason?.response?.status === 401 || result.reason?.response?.status === 403)
+        );
 
-        // --- Process Stats ---
+        if (authErrors.length > 0) {
+          throw new Error("Authentication failed. Please log in again.");
+        }
+
+        // Process inventory data
+        const inventoryData = inventoryRes.status === 'fulfilled' 
+          ? inventoryRes.value.data.results || inventoryRes.value.data || []
+          : [];
+        
+        const totalFirearms = inventoryRes.status === 'fulfilled'
+          ? inventoryRes.value.data.count || inventoryData.length || 0
+          : 0;
+
+        // Process requisitions data
+        const requisitionsData = requisitionsRes.status === 'fulfilled'
+          ? requisitionsRes.value.data.results || requisitionsRes.value.data || []
+          : [];
+        
+        const activeRequisitionsCount = requisitionsData.filter(
+          (req) => req.status === "Pending" || req.status === "pending"
+        ).length;
+
+        // Process users data
+        const usersData = usersRes.status === 'fulfilled'
+          ? usersRes.value.data.results || usersRes.value.data || []
+          : [];
+        
+        const usersCount = usersRes.status === 'fulfilled'
+          ? usersRes.value.data.count || usersData.length || 0
+          : 0;
+
         setStats({
-          totalArms: inventoryRes.data.count || inventoryData.length,
-          activeRequisitions: requisitionsData.filter(req => req.status?.toLowerCase() === "pending").length,
-          registeredUsers: usersRes.data.count || usersData.length,
+          totalArms: totalFirearms,
+          activeRequisitions: activeRequisitionsCount,
+          registeredUsers: usersCount,
         });
 
         // --- Process Arms Chart Data ---
-        const typeCounts = inventoryData.reduce((acc, firearm) => {
-          const type = firearm.type || "Unknown";
-          acc[type] = (acc[type] || 0) + (firearm.quantity || 1);
-          return acc;
-        }, {});
+        const typeCounts = {};
+        inventoryData.forEach(firearm => {
+          const type = firearm.type || firearm.firearm_type || "Unknown";
+          typeCounts[type] = (typeCounts[type] || 0) + 1;
+        });
 
         setArmsData({
           labels: Object.keys(typeCounts),
-          datasets: [{
-            label: "Number of Items",
-            data: Object.values(typeCounts),
-            backgroundColor: "rgba(53, 162, 235, 0.5)",
-          }],
+          datasets: [
+            {
+              label: "Number of Items",
+              data: Object.values(typeCounts),
+              backgroundColor: "rgba(53, 162, 235, 0.5)",
+              borderColor: "rgb(53, 162, 235)",
+              borderWidth: 1,
+            },
+          ],
         });
 
         // --- Process Requisition Chart Data ---
@@ -114,35 +178,59 @@ export default function Dashboard() {
         
         const statusColors = {
           Approved: "rgba(75, 192, 192, 0.6)",
+          approved: "rgba(75, 192, 192, 0.6)",
           Pending: "rgba(255, 206, 86, 0.6)",
+          pending: "rgba(255, 206, 86, 0.6)",
           Rejected: "rgba(255, 99, 132, 0.6)",
+          rejected: "rgba(255, 99, 132, 0.6)",
         };
 
         setRequisitionData({
           labels: Object.keys(requisitionsByStatus),
-          datasets: [{
-            label: "Requisitions",
-            data: Object.values(requisitionsByStatus),
-            backgroundColor: Object.keys(requisitionsByStatus).map(status => statusColors[status] || 'rgba(201, 203, 207, 0.6)'),
-          }],
+          datasets: [
+            {
+              label: "Requisitions",
+              data: Object.values(requisitionsByStatus),
+              backgroundColor: Object.keys(requisitionsByStatus).map(
+                status => statusColors[status] || 'rgba(201, 203, 207, 0.6)'
+              ),
+            },
+          ],
         });
 
         // --- Process Recent Activities ---
         const sortedRequisitions = [...requisitionsData].sort(
-          (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+          (a, b) => new Date(b.created_at || b.date_created || 0) - new Date(a.created_at || a.date_created || 0)
         );
         setRecentActivities(sortedRequisitions.slice(0, 5));
 
+        // Show warning if requisitions service is down but other services work
+        if (requisitionsRes.status === 'rejected' && 
+            inventoryRes.status === 'fulfilled' && 
+            usersRes.status === 'fulfilled') {
+          setError("Requisition service temporarily unavailable. Some data may be incomplete.");
+        }
+
       } catch (err) {
         console.error("Dashboard fetch error:", err);
-        // If the interceptor fails to refresh the token, it will throw an error.
-        // We catch it here and redirect to login.
-        if (err.response?.status === 401 || err.response?.status === 403) {
-          setError("Your session has expired. Please log in again.");
+        
+        if (err.message.includes("Authentication") || err.message.includes("log in")) {
+          setError(err.message);
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
           setTimeout(() => navigate('/login'), 2000);
         } else {
           setError("Failed to fetch dashboard data. Please try again later.");
         }
+        
+        // Set empty data
+        setStats({
+          totalArms: 0,
+          activeRequisitions: 0,
+          registeredUsers: 0,
+        });
+        
+        setRecentActivities([]);
       } finally {
         setIsLoading(false);
       }
@@ -151,10 +239,7 @@ export default function Dashboard() {
     fetchData();
   }, [navigate]);
 
-  // Chart options... (rest of the component is the same)
-  // ...
-// ... (The rest of your return statement remains the same)
-// ...
+  // Chart options
   const barOptions = { 
     responsive: true, 
     plugins: { 
@@ -180,7 +265,11 @@ export default function Dashboard() {
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
       {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+        <div className={`border-l-4 p-4 mb-6 ${
+          error.includes("temporarily unavailable") 
+            ? "bg-yellow-100 border-yellow-500 text-yellow-700"
+            : "bg-red-100 border-red-500 text-red-700"
+        }`}>
           <p>{error}</p>
         </div>
       )}
@@ -192,19 +281,21 @@ export default function Dashboard() {
         <Card title="Registered Users"><p className="text-3xl font-bold">{stats.registeredUsers}</p></Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {armsData.labels.length > 0 && (
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <Bar data={armsData} options={barOptions} />
-          </div>
-        )}
-        {requisitionData.labels.length > 0 && (
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <Pie data={requisitionData} options={pieOptions} />
-          </div>
-        )}
-      </div>
+      {/* Charts Row - Only show if we have data */}
+      {(armsData.labels.length > 0 || requisitionData.labels.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {armsData.labels.length > 0 && (
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <Bar data={armsData} options={barOptions} />
+            </div>
+          )}
+          {requisitionData.labels.length > 0 && (
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <Pie data={requisitionData} options={pieOptions} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recent Activity + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
