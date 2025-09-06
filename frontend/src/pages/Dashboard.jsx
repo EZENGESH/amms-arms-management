@@ -75,70 +75,66 @@ export default function Dashboard() {
       setError(null);
       
       try {
-        // Check if user is authenticated
+        // Debug: Check what's actually in localStorage
+        console.log("LocalStorage access_token:", localStorage.getItem("access_token"));
+        console.log("LocalStorage refresh_token:", localStorage.getItem("refresh_token"));
+        
+        // Check if user is authenticated - use more robust checking
         const token = localStorage.getItem("access_token");
         const refreshToken = localStorage.getItem("refresh_token");
         
-        if (!token || !refreshToken) {
+        if (!token) {
+          console.error("No access token found in localStorage");
           throw new Error("Authentication required. Please log in.");
         }
 
-        console.log("Authentication tokens found, fetching data...");
+        if (!refreshToken) {
+          console.warn("No refresh token found - session may be incomplete");
+        }
 
-        // Use Promise.allSettled to handle partial failures gracefully
+        console.log("Authentication tokens found, attempting to fetch data...");
+
+        // Use the API clients directly - let the interceptors handle authentication
+        // Use Promise.allSettled to handle partial failures
         const [inventoryRes, requisitionsRes, usersRes] = await Promise.allSettled([
-          // Try to fetch inventory data
-          inventoryApi.get("/api/firearms/").catch(error => {
-            console.warn("Inventory API failed:", error.message);
-            return { data: { results: [], count: 0 } };
-          }),
-          
-          // Try to fetch requisitions data (this might fail due to service communication issues)
-          requisitionApi.get("/api/requisitions/").catch(error => {
-            console.warn("Requisition API failed - service communication issue:", error.message);
-            return { data: { results: [], count: 0 } };
-          }),
-          
-          // Try to fetch users data
-          api.get("/api/users/").catch(error => {
-            console.warn("Users API failed:", error.message);
-            return { data: { results: [], count: 0 } };
-          }),
+          inventoryApi.get("/api/firearms/"),
+          requisitionApi.get("/api/requisitions/"),
+          api.get("/api/users/"),
         ]);
 
-        // Check if we have any critical authentication errors
+        // Check for authentication errors
         const authErrors = [inventoryRes, requisitionsRes, usersRes].filter(
           result => result.status === 'rejected' && 
           (result.reason?.response?.status === 401 || result.reason?.response?.status === 403)
         );
 
         if (authErrors.length > 0) {
+          console.error("Authentication failed in one or more services:", authErrors);
           throw new Error("Authentication failed. Please log in again.");
         }
 
-        // Process inventory data
-        const inventoryData = inventoryRes.status === 'fulfilled' 
-          ? inventoryRes.value.data.results || inventoryRes.value.data || []
-          : [];
-        
+        // Process successful responses
+        const processResponse = (result, defaultValue = []) => {
+          if (result.status === 'fulfilled') {
+            return result.value.data.results || result.value.data || defaultValue;
+          }
+          console.warn("API call failed:", result.reason?.message);
+          return defaultValue;
+        };
+
+        const inventoryData = processResponse(inventoryRes);
+        const requisitionsData = processResponse(requisitionsRes);
+        const usersData = processResponse(usersRes);
+
+        // --- Process Stats ---
         const totalFirearms = inventoryRes.status === 'fulfilled'
           ? inventoryRes.value.data.count || inventoryData.length || 0
           : 0;
 
-        // Process requisitions data
-        const requisitionsData = requisitionsRes.status === 'fulfilled'
-          ? requisitionsRes.value.data.results || requisitionsRes.value.data || []
-          : [];
-        
         const activeRequisitionsCount = requisitionsData.filter(
           (req) => req.status === "Pending" || req.status === "pending"
         ).length;
 
-        // Process users data
-        const usersData = usersRes.status === 'fulfilled'
-          ? usersRes.value.data.results || usersRes.value.data || []
-          : [];
-        
         const usersCount = usersRes.status === 'fulfilled'
           ? usersRes.value.data.count || usersData.length || 0
           : 0;
@@ -204,20 +200,15 @@ export default function Dashboard() {
         );
         setRecentActivities(sortedRequisitions.slice(0, 5));
 
-        // Show warning if requisitions service is down but other services work
-        if (requisitionsRes.status === 'rejected' && 
-            inventoryRes.status === 'fulfilled' && 
-            usersRes.status === 'fulfilled') {
-          setError("Requisition service temporarily unavailable. Some data may be incomplete.");
-        }
-
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         
         if (err.message.includes("Authentication") || err.message.includes("log in")) {
           setError(err.message);
+          // Clear any potentially invalid tokens
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
+          // Redirect to login
           setTimeout(() => navigate('/login'), 2000);
         } else {
           setError("Failed to fetch dashboard data. Please try again later.");
@@ -236,7 +227,8 @@ export default function Dashboard() {
       }
     };
 
-    fetchData();
+    // Add a small delay to ensure localStorage is populated after login
+    setTimeout(fetchData, 100);
   }, [navigate]);
 
   // Chart options
@@ -265,11 +257,7 @@ export default function Dashboard() {
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
       {error && (
-        <div className={`border-l-4 p-4 mb-6 ${
-          error.includes("temporarily unavailable") 
-            ? "bg-yellow-100 border-yellow-500 text-yellow-700"
-            : "bg-red-100 border-red-500 text-red-700"
-        }`}>
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
           <p>{error}</p>
         </div>
       )}
