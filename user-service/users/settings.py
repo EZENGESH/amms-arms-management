@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Local apps
-    'user_service',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -121,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'user_service.CustomUser'
+AUTH_USER_MODEL = 'users.CustomUser'
 
 # ========================
 # INTERNATIONALIZATION
