@@ -4,7 +4,6 @@ from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -30,9 +29,18 @@ class ApiRoot(APIView):
 
 class LoginView(TokenObtainPairView):
     """
-    Returns access and refresh tokens for valid user credentials.
+    Returns access and refresh tokens for valid user credentials
+    plus serialized user data.
     """
     serializer_class = LoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            user = User.objects.get(username=request.data["username"])
+            user_data = UserSerializer(user).data
+            response.data["user"] = user_data
+        return response
 
 
 class LogoutView(APIView):
@@ -43,10 +51,18 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            refresh_token = request.data["refresh"]
+            refresh_token = request.data.get("refresh")
+            if not refresh_token:
+                return Response(
+                    {"error": "Refresh token is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({"message": "Successfully logged out"}, status=status.HTTP_205_RESET_CONTENT)
+            return Response(
+                {"message": "Successfully logged out"},
+                status=status.HTTP_205_RESET_CONTENT
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -60,7 +76,10 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
-        return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+        return Response(
+            {'message': 'Password changed successfully'},
+            status=status.HTTP_200_OK
+        )
 
 
 class UserDetailView(APIView):
@@ -152,7 +171,10 @@ class RegistrationApproveView(APIView):
     def post(self, request, pk):
         registration = get_object_or_404(Registration, pk=pk)
         if registration.is_approved:
-            return Response({'error': 'This registration is already approved'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'This registration is already approved'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         user_data = {
             'username': registration.username,
@@ -183,6 +205,12 @@ class RegistrationRejectView(APIView):
     def post(self, request, pk):
         registration = get_object_or_404(Registration, pk=pk)
         if registration.is_approved:
-            return Response({'error': 'This registration is already approved'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'This registration is already approved'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         registration.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"message": "Registration rejected and deleted"},
+            status=status.HTTP_204_NO_CONTENT
+        )
