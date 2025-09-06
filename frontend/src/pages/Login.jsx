@@ -23,28 +23,30 @@ export default function Login() {
     try {
       const response = await loginUser(credentials);
 
-      // ✅ Check for your actual response format
-      if (!response?.token || !response?.refresh_token) {
-        throw new Error('Invalid server response. Login failed.');
+      // Debugging
+      console.log("Login response:", response);
+
+      // ✅ Match Django SimpleJWT format
+      if (!response?.access || !response?.refresh) {
+        throw new Error("Invalid server response. Login failed.");
       }
 
-      console.log('Login response:', response); // Debugging
-
-      // ✅ Adapted to your backend’s fields
       const authData = {
-        token: response.token,
-        refresh_token: response.refresh_token,
-        user_id: response.user_id,
-        username: response.username,
-        email: response.email,
+        token: response.access,               // Access token (short-lived)
+        refresh_token: response.refresh,      // Refresh token
+        user_id: response?.user?.id,          // User object comes from serializer
+        username: response?.user?.username,
+        email: response?.user?.email,
+        service_number: response?.user?.service_number,
+        rank: response?.user?.rank,
       };
 
-      // Store in context
+      // Save in context
       login(authData);
 
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'An unexpected error occurred.');
+      console.error("Login error:", err);
+      setError(err.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
@@ -53,13 +55,13 @@ export default function Login() {
   return (
     <AuthLayout>
       <h1 className="text-xl font-semibold mb-4">Login to AMMS</h1>
-      
+
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
           {error}
         </div>
       )}
-      
+
       <form className="space-y-4" onSubmit={handleSubmit}>
         <input
           name="username"
@@ -82,15 +84,25 @@ export default function Login() {
           disabled={isLoading}
           className="w-full"
         >
-          {isLoading ? 'Logging in...' : 'Login'}
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
       </form>
 
       {/* Debug info */}
       <div className="mt-6 p-3 bg-gray-100 rounded text-xs">
         <p className="font-semibold">Debug Info:</p>
-        <p>Backend response includes: token, refresh_token, user_id, username, email</p>
-        <p>Check browser console for actual response</p>
+        <p>Expected response from backend:</p>
+        <pre>{`{
+  "access": "JWT_ACCESS_TOKEN",
+  "refresh": "JWT_REFRESH_TOKEN",
+  "user": {
+    "id": 1,
+    "username": "john",
+    "email": "john@example.com",
+    "service_number": "12345",
+    "rank": "Officer"
+  }
+}`}</pre>
       </div>
     </AuthLayout>
   );
