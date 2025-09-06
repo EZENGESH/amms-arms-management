@@ -153,10 +153,10 @@ class UserListView(generics.ListAPIView):
     """
     API endpoint for listing users (authenticated users only)
     """
-    queryset = User.objects.filter(is_active=True)
+    queryset = User.objects.filter(is_active=True).order_by('id')
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
-
+    # FIX: Add an ordering to the queryset to prevent pagination warnings.
     ordering = ['id']
 
 
