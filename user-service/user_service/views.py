@@ -7,9 +7,9 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from .models import Registration
+from .models import   CustomUser,Registration
 from .serializers import (
-    CustomUserSerializer,UserSerializer, UserProfileSerializer,
+    CustomUserSerializer, UserSerializer, UserProfileSerializer,
     LoginSerializer, RegistrationSerializer
 )
 from rest_framework.response import Response
