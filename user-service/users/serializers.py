@@ -2,6 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.hashers import make_password
 from .models import Registration
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 
 User = get_user_model()
 
@@ -69,23 +71,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class LoginSerializer(serializers.Serializer):
+class LoginSerializer(TokenObtainPairSerializer):
     """
-    Serializer for user login, validates credentials.
-    Works with JWT TokenObtainPairView.
+    Custom login serializer that returns JWT tokens + user info.
     """
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(
-        required=True, write_only=True, style={'input_type': 'password'}
-    )
+    def validate(self, attrs):
+        data = super().validate(attrs)
 
-    def validate(self, data):
-        user = authenticate(**data)
-        if user and user.is_active:
-            return {"user": user}
-        raise serializers.ValidationError(
-            "Invalid username or password. Please try again."
-        )
+        # Add user info to response
+        data.update({
+            "user": {
+                "id": self.user.id,
+                "username": self.user.username,
+                "email": self.user.email,
+                "first_name": self.user.first_name,
+                "last_name": self.user.last_name,
+                "service_number": self.user.service_number,
+                "rank": self.user.rank,
+            }
+        })
+        return data
 
 
 class RegistrationSerializer(serializers.ModelSerializer):

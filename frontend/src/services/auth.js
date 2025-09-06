@@ -1,6 +1,7 @@
 // src/services/auth.js
-import {api} from './apiClient';
+import { api } from './apiClient';
 
+// Register a new user
 export const registerUser = async (userData) => {
   try {
     const response = await api.post('/api/users/register/', {
@@ -14,64 +15,85 @@ export const registerUser = async (userData) => {
     });
     return response.data;
   } catch (error) {
-    // Use the improved error handling for registration
+    // Better error handling
     const errorMessages = error.response?.data || {};
     let errorMsg = "Registration failed. ";
-    
-    // Format specific field errors
+
     if (typeof errorMessages === 'object') {
       for (const [field, messages] of Object.entries(errorMessages)) {
         errorMsg += `${field}: ${Array.isArray(messages) ? messages.join(' ') : messages} `;
       }
     }
-    
-    throw new Error(errorMsg);
+    throw new Error(errorMsg.trim());
   }
 };
 
+// User login
 export const loginUser = async (credentials) => {
   try {
     const response = await api.post('/api/auth/login/', {
       username: credentials.username,
       password: credentials.password
     });
-    return response.data;
+
+    const data = response.data;
+
+    // Normalize backend response to a consistent structure
+    return {
+      token: data.access || data.token,          // JWT access token
+      refresh_token: data.refresh || data.refresh_token,
+      user_id: data.user?.id || data.user_id || data.id,
+      username: data.user?.username || data.username || credentials.username,
+      email: data.user?.email || data.email || null,
+      service_number: data.user?.service_number || data.service_number || null,
+      rank: data.user?.rank || data.rank || null
+    };
   } catch (error) {
     handleAuthError(error);
   }
 };
 
-// Rest of your original code remains unchanged
+// Logout user
 export const logoutUser = async () => {
   try {
     await api.post('/api/auth/logout/');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
   } catch (error) {
     console.error('Logout error:', error);
   }
 };
 
+// Refresh token
 export const refreshToken = async () => {
   try {
     const refreshToken = localStorage.getItem('refresh_token');
-    const response = await api.post('/api/auth/token/refresh/', { 
-      refresh: refreshToken 
+    const response = await api.post('/api/auth/token/refresh/', {
+      refresh: refreshToken
     });
-    return response.data;
+
+    const data = response.data;
+    return {
+      token: data.access,
+      refresh_token: refreshToken
+    };
   } catch (error) {
     handleAuthError(error);
   }
 };
 
+// Centralized error handler
 const handleAuthError = (error) => {
   let errorMessage = 'Authentication failed';
-  
+
   if (error.response) {
     if (error.response.data) {
       if (typeof error.response.data === 'object') {
         const errors = Object.entries(error.response.data)
-          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`);
+          .map(([field, messages]) =>
+            `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
+          );
         errorMessage = errors.join('\n');
       } else {
         errorMessage = error.response.data;
@@ -84,6 +106,6 @@ const handleAuthError = (error) => {
   } else {
     errorMessage = error.message || 'Network error';
   }
-  
+
   throw new Error(errorMessage);
 };
