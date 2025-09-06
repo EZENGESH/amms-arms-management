@@ -11,19 +11,14 @@ class CustomUserAdmin(UserAdmin):
     """
     Admin configuration for CustomUser model
     """
-    # Fields to display in the user list
-    list_display = ('username', 'email', 'first_name', 'last_name', 'service_number', 'rank', 'is_active', 'is_staff')
-    
-    # Fields to filter by
+    list_display = (
+        'username', 'email', 'first_name', 'last_name',
+        'service_number', 'rank', 'is_active', 'is_staff'
+    )
     list_filter = ('rank', 'is_active', 'is_staff', 'is_superuser', 'date_joined')
-    
-    # Fields to search
     search_fields = ('username', 'email', 'first_name', 'last_name', 'service_number')
-    
-    # Fields to order by
     ordering = ('username',)
-    
-    # Fields for the add form
+
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
@@ -36,8 +31,7 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
     )
-    
-    # Fields for the change form
+
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Personal Info', {
@@ -55,22 +49,17 @@ class RegistrationAdmin(admin.ModelAdmin):
     """
     Admin configuration for Registration model
     """
-    # Fields to display in the registration list
-    list_display = ('username', 'email', 'first_name', 'last_name', 'service_number', 'rank', 'is_approved', 'created_at')
-    
-    # Fields to filter by
+    list_display = (
+        'username', 'email', 'first_name', 'last_name',
+        'service_number', 'rank', 'is_approved', 'created_at'
+    )
     list_filter = ('rank', 'is_approved', 'created_at', 'updated_at')
-    
-    # Fields to search
     search_fields = ('username', 'email', 'first_name', 'last_name', 'service_number')
-    
-    # Fields to order by
     ordering = ('-created_at',)
-    
-    # Read-only fields
-    readonly_fields = ('created_at', 'updated_at', 'password')
-    
-    # Fields for the form
+
+    # Use display_password instead of raw password
+    readonly_fields = ('created_at', 'updated_at', 'display_password')
+
     fieldsets = (
         ('Registration Info', {
             'fields': ('username', 'email', 'service_number', 'rank'),
@@ -79,8 +68,8 @@ class RegistrationAdmin(admin.ModelAdmin):
             'fields': ('first_name', 'last_name'),
         }),
         ('Password', {
-            'fields': ('password',),
-            'description': 'Password is hashed and cannot be displayed.',
+            'fields': ('display_password',),
+            'description': 'Stored password (hashed). Cannot be edited or viewed in plain text.',
         }),
         ('Status', {
             'fields': ('is_approved',),
@@ -90,18 +79,23 @@ class RegistrationAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
-    
-    # Custom actions
+
     actions = ['approve_registrations', 'reject_registrations']
-    
+
+    def display_password(self, obj):
+        """
+        Mask the password field in the admin panel.
+        """
+        return "********" if obj.password else "(no password set)"
+    display_password.short_description = "Password"
+
     def approve_registrations(self, request, queryset):
         """
-        Admin action to approve selected registrations
+        Approve selected registrations and create corresponding users.
         """
         count = 0
         for registration in queryset.filter(is_approved=False):
             try:
-                # Create user from registration
                 user_data = {
                     'username': registration.username,
                     'email': registration.email,
@@ -110,30 +104,35 @@ class RegistrationAdmin(admin.ModelAdmin):
                     'service_number': registration.service_number,
                     'rank': registration.rank,
                 }
-                
+
+                # Create user with hashed password (already stored in registration.password)
                 user = User.objects.create_user(
-                    password=registration.password,  # Already hashed
+                    password=registration.password,
                     **user_data
                 )
-                
+
                 registration.is_approved = True
                 registration.save()
                 count += 1
-                
+
             except Exception as e:
-                self.message_user(request, f"Failed to approve {registration.username}: {str(e)}", level='ERROR')
-        
+                self.message_user(
+                    request,
+                    f"Failed to approve {registration.username}: {str(e)}",
+                    level='ERROR'
+                )
+
         if count > 0:
             self.message_user(request, f"Successfully approved {count} registrations.")
-    
+
     approve_registrations.short_description = "Approve selected registrations"
-    
+
     def reject_registrations(self, request, queryset):
         """
-        Admin action to reject (delete) selected registrations
+        Reject (delete) selected registrations that are not yet approved.
         """
         count = queryset.filter(is_approved=False).count()
         queryset.filter(is_approved=False).delete()
         self.message_user(request, f"Successfully rejected {count} registrations.")
-    
+
     reject_registrations.short_description = "Reject selected registrations"
