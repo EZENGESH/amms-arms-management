@@ -1,33 +1,41 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import AuthLayout from "../layouts/AuthLayout";
-import Button from "../components/Button";
-import { loginUser } from "../services/auth";
+import { useState } from 'react';
+// FIX: useNavigate is no longer needed here as the context handles it.
+import { useAuth } from '../context/AuthContext';
+import AuthLayout from '../layouts/AuthLayout';
+import Button from '../components/Button';
+import { loginUser } from '../services/auth';
 
 export default function Login() {
-  const { login, user } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (user) return; // Already logged in, redirect handled by AuthProvider
-  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    try {
-      const response = await loginUser({ username, password });
-      if (!response.token) throw new Error("No access token received from backend");
+    const formData = new FormData(e.target);
+    const credentials = {
+      username: formData.get('username').trim(),
+      password: formData.get('password'),
+    };
 
-      login(response); // AuthProvider handles storage and redirect
+    try {
+      const response = await loginUser(credentials); // your API call
+      
+      // FIX: Check for 'access' token, which is the JWT standard.
+      
+      if (!response?.access) {
+        throw new Error('Invalid server response. Login failed.');
+      }
+
+      // FIX: Call the context's login function with the entire response object.
+      // The context will handle extracting the tokens and user data.
+      login(response);
+
     } catch (err) {
-      console.error("Login error:", err);
-      setError(err.message || "An unexpected error occurred.");
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
@@ -36,34 +44,30 @@ export default function Login() {
   return (
     <AuthLayout>
       <h1 className="text-xl font-semibold mb-4">Login to AMMS</h1>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
+      
+      {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
+      
       <form className="space-y-4" onSubmit={handleSubmit}>
+        {/* ... form inputs remain the same ... */}
+{/* ...existing code... */}
         <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          name="username"
           type="text"
           placeholder="Username"
           required
-          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
         <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          name="password"
           type="password"
           placeholder="Password"
           required
-          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? "Logging in..." : "Login"}
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
     </AuthLayout>
