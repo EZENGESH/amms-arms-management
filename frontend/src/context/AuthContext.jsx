@@ -26,29 +26,28 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // ✅ Login function (matches your API)
-const login = (authData) => {
-  const access = authData.access || authData.token;
-  const refresh = authData.refresh || authData.refresh_token;
+  // Login function
+  const login = (authData) => {
+    const access = authData.access || authData.token;
+    const refresh = authData.refresh || authData.refresh_token;
 
-  const userInfo = authData.user || {
-    id: authData.user_id,
-    username: authData.username,
-    email: authData.email,
-    service_number: authData.service_number,
-    rank: authData.rank,
+    const userInfo = authData.user || {
+      id: authData.user_id,
+      username: authData.username,
+      email: authData.email,
+      service_number: authData.service_number,
+      rank: authData.rank,
+    };
+
+    if (!access) throw new Error("No access token received from server");
+
+    localStorage.setItem("access_token", access);
+    if (refresh) localStorage.setItem("refresh_token", refresh);
+    localStorage.setItem("user", JSON.stringify(userInfo));
+
+    setUser({ access, refresh, ...userInfo });
+    navigate("/dashboard");
   };
-
-  if (!access) throw new Error("No access token received from server");
-
-  localStorage.setItem("access_token", access);
-  if (refresh) localStorage.setItem("refresh_token", refresh);
-  localStorage.setItem("user", JSON.stringify(userInfo));
-
-  setUser({ access, refresh, ...userInfo });
-  navigate("/dashboard");
-};
-
 
   // Logout function
   const logout = () => {
@@ -59,15 +58,13 @@ const login = (authData) => {
     navigate("/login");
   };
 
-  // ✅ Refresh token function (your backend returns { token: "..." })
+  // Refresh token function
   const refreshToken = async () => {
     try {
       const storedRefresh = localStorage.getItem("refresh_token");
       if (!storedRefresh) throw new Error("No refresh token available");
 
-      const data = await refreshTokenAPI(storedRefresh);
-
-      // backend returns { token: "..." }
+      const data = await refreshTokenAPI(storedRefresh); // expects { token: "..." }
       localStorage.setItem("access_token", data.token);
 
       setUser((prev) => ({ ...prev, access: data.token }));
