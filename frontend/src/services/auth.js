@@ -1,3 +1,4 @@
+// src/services/auth.js
 import { api } from './apiClient';
 
 // ==============================
@@ -97,6 +98,32 @@ export const refreshToken = async () => {
     return { token: data.access, refresh_token };
   } catch (err) {
     clearAuthStorage();
+    handleAuthError(err);
+  }
+};
+
+// Register
+export const registerUser = async ({ username, email, password, service_number, rank }) => {
+  try {
+    const { data } = await api.post('/api/v1/auth/register/', {
+      username,
+      email,
+      password,
+      service_number,
+      rank,
+    });
+
+    // Optionally return user object
+    const user = {
+      user_id: data.id,
+      username: data.username,
+      email: data.email,
+      service_number: data.service_number,
+      rank: data.rank,
+    };
+
+    return user;
+  } catch (err) {
     handleAuthError(err);
   }
 };
