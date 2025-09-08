@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
+import AdminLayout from "../layouts/AdminLayout";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -13,7 +13,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import AdminLayout from "../layouts/AdminLayout";
+import { api, inventoryApi, requisitionApi } from "../services/apiClient";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -26,19 +26,6 @@ export default function Dashboard() {
   const [armsData, setArmsData] = useState({ labels: [], datasets: [] });
   const [requisitionData, setRequisitionData] = useState({ labels: [], datasets: [] });
   const [recentActivities, setRecentActivities] = useState([]);
-
-  // API endpoints
-  const API_BASE_URL = {
-    inventory: "http://localhost:8009/api/arms/",
-    requisitions: "http://localhost:8003/api/requisitions/",
-    users: "http://localhost:8001/api/v1/users/",
-  };
-
-  // Attach token to axios
-  const token = localStorage.getItem("token");
-  const axiosConfig = {
-    headers: { Authorization: `Bearer ${token}` },
-  };
 
   const statusColors = {
     approved: "text-green-600",
@@ -53,9 +40,9 @@ export default function Dashboard() {
 
       try {
         const [usersRes, inventoryRes, requisitionsRes] = await Promise.all([
-          axios.get(API_BASE_URL.users, axiosConfig),
-          axios.get(API_BASE_URL.inventory, axiosConfig),
-          axios.get(API_BASE_URL.requisitions, axiosConfig),
+          api.get("/api/v1/users/"),
+          inventoryApi.get("/api/arms/"),
+          requisitionApi.get("/api/requisitions/"),
         ]);
 
         const usersData = usersRes.data.results || usersRes.data || [];
@@ -69,7 +56,7 @@ export default function Dashboard() {
           registeredUsers: usersData.length,
         });
 
-        // Arms chart
+        // Arms Chart
         const typeCounts = inventoryData.reduce((acc, item) => {
           const type = item.type || "Unknown";
           acc[type] = (acc[type] || 0) + (item.quantity || 1);
@@ -86,7 +73,7 @@ export default function Dashboard() {
           ],
         });
 
-        // Requisition chart
+        // Requisition Chart
         const statusCounts = requisitionsData.reduce((acc, r) => {
           const status = r.status || "Unknown";
           acc[status] = (acc[status] || 0) + 1;
@@ -103,12 +90,14 @@ export default function Dashboard() {
             {
               label: "Requisitions",
               data: Object.values(statusCounts),
-              backgroundColor: Object.keys(statusCounts).map(s => chartColors[s] || "rgba(201,203,207,0.6)"),
+              backgroundColor: Object.keys(statusCounts).map(
+                s => chartColors[s] || "rgba(201,203,207,0.6)"
+              ),
             },
           ],
         });
 
-        // Recent activities (latest 5)
+        // Recent Activities
         const sortedActivities = [...requisitionsData].sort(
           (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
         );
@@ -170,11 +159,15 @@ export default function Dashboard() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {armsData.labels.length > 0 && <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
-          {requisitionData.labels.length > 0 && <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
+          {armsData.labels.length > 0 && (
+            <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />
+          )}
+          {requisitionData.labels.length > 0 && (
+            <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />
+          )}
         </div>
 
-        {/* Recent Activities */}
+        {/* Recent Activity */}
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-gray-700">Recent Activity</h2>
           {recentActivities.length > 0 ? (
@@ -186,7 +179,9 @@ export default function Dashboard() {
                     {new Date(activity.created_at || activity.date_created).toLocaleDateString()}
                   </span>
                 </div>
-                <p className={`text-sm ${statusColors[activity.status?.toLowerCase()] || "text-gray-600"}`}>
+                <p
+                  className={`text-sm ${statusColors[activity.status?.toLowerCase()] || "text-gray-600"}`}
+                >
                   Status: {activity.status} | By: {activity.name} ({activity.service_number})
                 </p>
               </div>
