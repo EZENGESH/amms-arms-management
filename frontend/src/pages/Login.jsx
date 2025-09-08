@@ -1,4 +1,6 @@
+// src/pages/Login.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../layouts/AuthLayout";
 import Button from "../components/Button";
@@ -6,11 +8,12 @@ import { loginUser } from "../services/auth";
 
 export default function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // prevent full page reload
     setIsLoading(true);
     setError(null);
 
@@ -22,20 +25,18 @@ export default function Login() {
 
     try {
       const response = await loginUser(credentials);
-      console.log("Login response:", response);
-      // Check server response
+
       if (!response?.access || !response?.refresh) {
         throw new Error("Invalid server response. Login failed.");
       }
 
-      // Store tokens in localStorage for apiClient interceptors
-      localStorage.setItem("access_token", response.access);
-      localStorage.setItem("refresh_token", response.refresh);
-
-      // Pass full response to AuthContext
+      // Use AuthContext to store user and tokens
       login(response);
+
+      // Redirect to dashboard
+      navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || "Login failed.");
+      setError(err.message || "Login failed.");
     } finally {
       setIsLoading(false);
     }
