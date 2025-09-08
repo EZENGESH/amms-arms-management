@@ -14,6 +14,13 @@ const setAuthStorage = ({ token, refresh_token, user }) => {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 };
 
+const getAuthStorage = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const refresh_token = localStorage.getItem(REFRESH_KEY);
+  const user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+  return { token, refresh_token, user };
+};
+
 const clearAuthStorage = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_KEY);
@@ -80,13 +87,14 @@ export const logoutUser = async () => {
     console.error('Logout error:', err.response?.data || err.message);
   } finally {
     clearAuthStorage();
+    window.location.href = '/login'; // force redirect
   }
 };
 
 // Refresh token
 export const refreshToken = async () => {
   try {
-    const refresh_token = localStorage.getItem(REFRESH_KEY);
+    const { refresh_token } = getAuthStorage();
     if (!refresh_token) throw new Error('No refresh token available');
 
     const { data } = await api.post('/api/v1/auth/token/refresh/', { refresh: refresh_token });
@@ -123,4 +131,10 @@ export const registerUser = async ({ username, email, password, service_number, 
   } catch (err) {
     handleAuthError(err);
   }
+};
+
+// Get current user
+export const getCurrentUser = () => {
+  const { user } = getAuthStorage();
+  return user;
 };
