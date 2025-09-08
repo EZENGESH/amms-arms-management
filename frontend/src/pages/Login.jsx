@@ -29,8 +29,8 @@ export default function Login() {
       }
 
       // Store tokens in localStorage for apiClient interceptors
-      localStorage.setItem("access_token", response.token);
-      localStorage.setItem("refresh_token", response.refresh_token);
+      localStorage.setItem("access_token", response.access);
+      localStorage.setItem("refresh_token", response.refresh);
 
       // Pass full response to AuthContext
       login(response);
