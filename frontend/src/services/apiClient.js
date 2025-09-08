@@ -1,8 +1,5 @@
 import axios from "axios";
 
-// ==============================
-// Base URLs for microservices
-// ==============================
 const SERVICES = {
   user: "http://localhost:8001",
   inventory: "http://localhost:8009",
@@ -10,9 +7,6 @@ const SERVICES = {
   firearmLog: "http://localhost:8009",
 };
 
-// ==============================
-// Force logout helper
-// ==============================
 const forceLogout = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
@@ -21,11 +15,6 @@ const forceLogout = () => {
   }
 };
 
-// ==============================
-// Interceptors
-// ==============================
-
-// Attach JWT token to requests
 const attachToken = (instance) => {
   instance.interceptors.request.use(
     (config) => {
@@ -37,7 +26,6 @@ const attachToken = (instance) => {
   );
 };
 
-// Refresh token automatically
 const attachRefresh = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
@@ -63,7 +51,6 @@ const attachRefresh = (instance) => {
             `${SERVICES.user}/api/v1/auth/token/refresh/`,
             { refresh: refreshToken }
           );
-
           localStorage.setItem("access_token", data.access);
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return instance(originalRequest);
@@ -78,7 +65,6 @@ const attachRefresh = (instance) => {
   );
 };
 
-// Log API errors nicely
 const attachErrorLogging = (instance, name) => {
   instance.interceptors.response.use(
     (response) => response,
@@ -96,17 +82,12 @@ const attachErrorLogging = (instance, name) => {
   );
 };
 
-// ==============================
-// Axios instance factory
-// ==============================
 const createService = (baseURL, serviceName) => {
   const instance = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
     timeout: 10000,
   });
-
-  
 
   attachToken(instance);
   attachRefresh(instance);
@@ -115,25 +96,9 @@ const createService = (baseURL, serviceName) => {
   return instance;
 };
 
-// ==============================
-// Export service instances
-// ==============================
 export const api = createService(SERVICES.user, "User");
 export const inventoryApi = createService(SERVICES.inventory, "Inventory");
 export const requisitionApi = createService(SERVICES.requisition, "Requisition");
 export const firearmApi = createService(SERVICES.firearmLog, "Firearm Log");
 
-requisitionApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-export default {
-  api,
-  inventoryApi,
-  requisitionApi,
-  firearmApi,
-};
+export default { api, inventoryApi, requisitionApi, firearmApi };

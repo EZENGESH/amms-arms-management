@@ -21,7 +21,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [stats, setStats] = useState({});
+  const [stats, setStats] = useState({ totalArms: 0, activeRequisitions: 0, registeredUsers: 0 });
   const [armsData, setArmsData] = useState({ labels: [], datasets: [] });
   const [requisitionData, setRequisitionData] = useState({ labels: [], datasets: [] });
   const [recentActivities, setRecentActivities] = useState([]);
@@ -33,7 +33,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboardData = async () => {
       setIsLoading(true);
       setError(null);
 
@@ -48,14 +48,14 @@ export default function Dashboard() {
         const inventory = inventoryRes.data.results || inventoryRes.data || [];
         const requisitions = requisitionsRes.data.results || requisitionsRes.data || [];
 
-        // Dashboard stats
+        // ===== Stats =====
         setStats({
           totalArms: inventory.reduce((sum, arm) => sum + (arm.quantity || 1), 0),
           activeRequisitions: requisitions.filter(r => r.status?.toLowerCase() === "pending").length,
           registeredUsers: users.length,
         });
 
-        // Arms chart
+        // ===== Arms Chart =====
         const typeCounts = inventory.reduce((acc, item) => {
           const type = item.type || "Unknown";
           acc[type] = (acc[type] || 0) + (item.quantity || 1);
@@ -72,7 +72,7 @@ export default function Dashboard() {
           ],
         });
 
-        // Requisition chart
+        // ===== Requisition Chart =====
         const statusCounts = requisitions.reduce((acc, r) => {
           const status = r.status || "Unknown";
           acc[status] = (acc[status] || 0) + 1;
@@ -89,18 +89,20 @@ export default function Dashboard() {
             {
               label: "Requisitions",
               data: Object.values(statusCounts),
-              backgroundColor: Object.keys(statusCounts).map(s => chartColors[s] || "rgba(201,203,207,0.6)"),
+              backgroundColor: Object.keys(statusCounts).map(
+                s => chartColors[s] || "rgba(201,203,207,0.6)"
+              ),
             },
           ],
         });
 
-        // Recent activities
+        // ===== Recent Activities =====
         const sortedActivities = [...requisitions].sort(
           (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
         );
         setRecentActivities(sortedActivities.slice(0, 5));
       } catch (err) {
-        console.error(err);
+        console.error("Dashboard Fetch Error:", err);
         if (err.response?.status === 401 || err.response?.status === 403) {
           setError("Session expired. Redirecting to login...");
           setTimeout(() => navigate("/login"), 2000);
@@ -112,7 +114,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchData();
+    fetchDashboardData();
   }, [navigate]);
 
   const barOptions = {
@@ -125,59 +127,72 @@ export default function Dashboard() {
     plugins: { legend: { position: "top" }, title: { display: true, text: "Requisition Status" } },
   };
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
+  }
 
   return (
     <AdminLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
-        {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+            {error}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500">Total Arms</p>
-            <p className="text-3xl font-bold mt-2">{stats.totalArms}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500">Active Requisitions</p>
-            <p className="text-3xl font-bold mt-2">{stats.activeRequisitions}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500">Registered Users</p>
-            <p className="text-3xl font-bold mt-2">{stats.registeredUsers}</p>
-          </div>
+          <StatCard title="Total Arms" value={stats.totalArms} />
+          <StatCard title="Active Requisitions" value={stats.activeRequisitions} />
+          <StatCard title="Registered Users" value={stats.registeredUsers} />
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {armsData.labels.length > 0 && <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
-          {requisitionData.labels.length > 0 && <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
+          {armsData.labels.length > 0 && <ChartWrapper chart={<Bar data={armsData} options={barOptions} />} />}
+          {requisitionData.labels.length > 0 && <ChartWrapper chart={<Pie data={requisitionData} options={pieOptions} />} />}
         </div>
 
         {/* Recent Activities */}
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Recent Activity</h2>
-          {recentActivities.length > 0 ? (
-            recentActivities.map(activity => (
-              <div key={activity.id} className="border-b pb-3 mb-3">
-                <div className="flex justify-between">
-                  <p className="font-medium">New Requisition: {activity.firearm_type}</p>
-                  <span className="text-sm text-gray-500">
-                    {new Date(activity.created_at || activity.date_created).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className={`text-sm ${statusColors[activity.status?.toLowerCase()] || "text-gray-600"}`}>
-                  Status: {activity.status} | By: {activity.name} ({activity.service_number})
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-600">No recent activities found.</p>
-          )}
-        </div>
+        <RecentActivities activities={recentActivities} statusColors={statusColors} />
       </div>
     </AdminLayout>
   );
 }
+
+// ===== Subcomponents =====
+const StatCard = ({ title, value }) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm">
+    <p className="text-gray-500">{title}</p>
+    <p className="text-3xl font-bold mt-2">{value}</p>
+  </div>
+);
+
+const ChartWrapper = ({ chart }) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm">{chart}</div>
+);
+
+const RecentActivities = ({ activities, statusColors }) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm">
+    <h2 className="text-xl font-semibold mb-4 text-gray-700">Recent Activity</h2>
+    {activities.length > 0 ? (
+      activities.map(activity => (
+        <div key={activity.id} className="border-b pb-3 mb-3">
+          <div className="flex justify-between">
+            <p className="font-medium">New Requisition: {activity.firearm_type}</p>
+            <span className="text-sm text-gray-500">
+              {new Date(activity.created_at || activity.date_created).toLocaleDateString()}
+            </span>
+          </div>
+          <p className={`text-sm ${statusColors[activity.status?.toLowerCase()] || "text-gray-600"}`}>
+            Status: {activity.status} | By: {activity.name} ({activity.service_number})
+          </p>
+        </div>
+      ))
+    ) : (
+      <p className="text-sm text-gray-600">No recent activities found.</p>
+    )}
+  </div>
+);
