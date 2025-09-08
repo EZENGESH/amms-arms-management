@@ -51,6 +51,7 @@ export default function RequisitionForm() {
   };
 
   return (
+    <AdminLayout>
       <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-md">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">New Requisition</h1>
 
@@ -165,5 +166,6 @@ export default function RequisitionForm() {
           </div>
         </form>
       </div>
+    </AdminLayout>
   );
 }

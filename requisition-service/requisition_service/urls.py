@@ -9,3 +9,4 @@ urlpatterns = [
     # Include the requisitions app URLs under the 'api/' prefix
     path('api/', include('requisitions.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+

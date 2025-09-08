@@ -13,6 +13,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import AdminLayout from "../layouts/AdminLayout";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -123,6 +124,7 @@ export default function Dashboard() {
   if (isLoading) return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
 
   return (
+    <AdminLayout>
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
@@ -166,5 +168,6 @@ export default function Dashboard() {
         )) : <p className="text-sm text-gray-600">No recent activities found.</p>}
       </div>
     </div>
+  </AdminLayout>
   );
 }
