@@ -26,27 +26,24 @@ const forceLogout = () => {
 // ==============================
 
 // Attach JWT token to requests
-const addTokenInterceptor = (instance) => {
+const attachToken = (instance) => {
   instance.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem("access_token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
       return config;
     },
     (error) => Promise.reject(error)
   );
 };
 
-// Refresh token interceptor
-const addRefreshInterceptor = (instance) => {
+// Refresh token automatically
+const attachRefresh = (instance) => {
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
 
-      // Prevent infinite loop
       if (originalRequest.url.includes("/token/refresh/")) {
         forceLogout();
         return Promise.reject(error);
@@ -55,26 +52,24 @@ const addRefreshInterceptor = (instance) => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
-        try {
-          const refreshToken = localStorage.getItem("refresh_token");
-          if (!refreshToken) {
-            forceLogout();
-            return Promise.reject(error);
-          }
-
-          // ✅ Fixed: Added /v1/ to match Django
-          const response = await axios.post(`${SERVICES.user}/api/v1/auth/token/refresh/`, {
-            refresh: refreshToken,
-          });
-
-          const newAccessToken = response.data.access;
-          localStorage.setItem("access_token", newAccessToken);
-
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return instance(originalRequest);
-        } catch (refreshError) {
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (!refreshToken) {
           forceLogout();
-          return Promise.reject(refreshError);
+          return Promise.reject(error);
+        }
+
+        try {
+          const { data } = await axios.post(
+            `${SERVICES.user}/api/v1/auth/token/refresh/`,
+            { refresh: refreshToken }
+          );
+
+          localStorage.setItem("access_token", data.access);
+          originalRequest.headers.Authorization = `Bearer ${data.access}`;
+          return instance(originalRequest);
+        } catch (err) {
+          forceLogout();
+          return Promise.reject(err);
         }
       }
 
@@ -83,16 +78,16 @@ const addRefreshInterceptor = (instance) => {
   );
 };
 
-// Error logging interceptor
-const addErrorLoggingInterceptor = (instance, serviceName) => {
+// Log API errors nicely
+const attachErrorLogging = (instance, name) => {
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
       if (!error.response) {
-        console.error(`${serviceName} Service: Network Error or service is down.`);
+        console.error(`${name} Service: Network error or service down.`);
       } else {
         console.error(
-          `${serviceName} Service Error: ${error.response.status} ${error.config.method.toUpperCase()} ${error.config.url}`,
+          `${name} Service Error: ${error.response.status} ${error.config.method.toUpperCase()} ${error.config.url}`,
           error.response.data
         );
       }
@@ -102,33 +97,33 @@ const addErrorLoggingInterceptor = (instance, serviceName) => {
 };
 
 // ==============================
-// Create Axios instances dynamically
+// Axios instance factory
 // ==============================
-const createServiceInstance = (baseURL, serviceName) => {
+const createService = (baseURL, serviceName) => {
   const instance = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
     timeout: 10000,
   });
 
-  addTokenInterceptor(instance);
-  addRefreshInterceptor(instance);
-  addErrorLoggingInterceptor(instance, serviceName);
+  attachToken(instance);
+  attachRefresh(instance);
+  attachErrorLogging(instance, serviceName);
 
   return instance;
 };
 
 // ==============================
-// Export all service instances
+// Export service instances
 // ==============================
-export const api = createServiceInstance(SERVICES.user, "User");
-export const inventoryApi = createServiceInstance(SERVICES.inventory, "Inventory");
-export const requisitionApi = createServiceInstance(SERVICES.requisition, "Requisition");
-export const logfirearmapi = createServiceInstance(SERVICES.firearmLog, "Firearm Log");
+export const api = createService(SERVICES.user, "User");
+export const inventoryApi = createService(SERVICES.inventory, "Inventory");
+export const requisitionApi = createService(SERVICES.requisition, "Requisition");
+export const firearmApi = createService(SERVICES.firearmLog, "Firearm Log");
 
 export default {
   api,
   inventoryApi,
   requisitionApi,
-  logfirearmapi,
+  firearmApi,
 };
