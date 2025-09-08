@@ -77,7 +77,7 @@ export const logoutUser = async () => {
   try {
     await api.post('/api/v1/auth/logout/');
   } catch (err) {
-    console.error('Logout error:', err);
+    console.error('Logout error:', err.response?.data || err.message);
   } finally {
     clearAuthStorage();
   }
@@ -113,16 +113,13 @@ export const registerUser = async ({ username, email, password, service_number, 
       rank,
     });
 
-    // Optionally return user object
-    const user = {
+    return {
       user_id: data.id,
       username: data.username,
       email: data.email,
       service_number: data.service_number,
       rank: data.rank,
     };
-
-    return user;
   } catch (err) {
     handleAuthError(err);
   }
