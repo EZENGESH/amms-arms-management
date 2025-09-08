@@ -49,7 +49,6 @@ export default function Dashboard() {
 
       try {
         const [usersRes, inventoryRes, requisitionsRes] = await Promise.all([
-          axios.get(API_BASE_URL.users),
           axios.get(API_BASE_URL.inventory),
           axios.get(API_BASE_URL.requisitions),
         ]);
