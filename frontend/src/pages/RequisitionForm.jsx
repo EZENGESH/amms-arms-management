@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import AdminLayout from '../layouts/AdminLayout';
 import Button from '../components/Button';
-import { createRequisition } from '../services/requisitions'; // <-- Import the function
+import { createRequisition } from '../services/requisitions';
 
 export default function RequisitionForm() {
   const [formData, setFormData] = useState({
@@ -15,13 +16,10 @@ export default function RequisitionForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Handle input change
+  // Handle input changes
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value
-    }));
+    setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
   // Handle form submission
@@ -31,9 +29,8 @@ export default function RequisitionForm() {
     setMessage('');
 
     try {
-      await createRequisition(formData); // <-- Use the imported function
+      await createRequisition(formData);
       setMessage('Requisition submitted successfully!');
-      // Reset the form
       setFormData({
         service_number: '',
         rank: '',
@@ -44,11 +41,22 @@ export default function RequisitionForm() {
       });
     } catch (error) {
       console.error('Error submitting requisition:', error);
-      setMessage('Failed to submit requisition.');
+      const errorMsg =
+        error?.response?.data?.detail || 'Failed to submit requisition.';
+      setMessage(errorMsg);
     } finally {
       setLoading(false);
     }
   };
+
+  const fields = [
+    { id: 'service_number', label: 'Service Number', type: 'text', placeholder: 'Enter service number' },
+    { id: 'rank', label: 'Rank', type: 'text', placeholder: 'Enter rank' },
+    { id: 'name', label: 'Name', type: 'text', placeholder: 'Enter name' },
+    { id: 'station_unit', label: 'Station/Unit', type: 'text', placeholder: 'Enter station or unit' },
+    { id: 'firearm_type', label: 'Firearm Type', type: 'text', placeholder: 'Enter firearm type' },
+    { id: 'quantity', label: 'Quantity', type: 'number', placeholder: 'Enter quantity' }
+  ];
 
   return (
     <AdminLayout>
@@ -56,109 +64,32 @@ export default function RequisitionForm() {
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">New Requisition</h1>
 
         {message && (
-          <div className={`mb-4 text-center text-sm font-medium ${message.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>
+          <div
+            className={`mb-4 text-center text-sm font-medium ${message.includes('successfully') ? 'text-green-600' : 'text-red-600'
+              }`}
+          >
             {message}
           </div>
         )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Service Number */}
-          <div>
-            <label htmlFor="service_number" className="block mb-2 text-sm font-medium text-gray-700">
-              Service Number
-            </label>
-            <input
-              type="text"
-              id="service_number"
-              value={formData.service_number}
-              onChange={handleChange}
-              placeholder="Enter service number"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+          {fields.map(({ id, label, type, placeholder }) => (
+            <div key={id}>
+              <label htmlFor={id} className="block mb-2 text-sm font-medium text-gray-700">
+                {label}
+              </label>
+              <input
+                id={id}
+                type={type}
+                value={formData[id]}
+                onChange={handleChange}
+                placeholder={placeholder}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          ))}
 
-          {/* Rank */}
-          <div>
-            <label htmlFor="rank" className="block mb-2 text-sm font-medium text-gray-700">
-              Rank
-            </label>
-            <input
-              type="text"
-              id="rank"
-              value={formData.rank}
-              onChange={handleChange}
-              placeholder="Enter rank"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {/* Name */}
-          <div>
-            <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter name"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {/* Station/Unit */}
-          <div>
-            <label htmlFor="station_unit" className="block mb-2 text-sm font-medium text-gray-700">
-              Station/Unit
-            </label>
-            <input
-              type="text"
-              id="station_unit"
-              value={formData.station_unit}
-              onChange={handleChange}
-              placeholder="Enter station or unit"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {/* Firearm Type */}
-          <div>
-            <label htmlFor="firearm_type" className="block mb-2 text-sm font-medium text-gray-700">
-              Firearm Type
-            </label>
-            <input
-              type="text"
-              id="firearm_type"
-              value={formData.firearm_type}
-              onChange={handleChange}
-              placeholder="Enter firearm type"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {/* Quantity */}
-          <div>
-            <label htmlFor="quantity" className="block mb-2 text-sm font-medium text-gray-700">
-              Quantity
-            </label>
-            <input
-              type="number"
-              id="quantity"
-              value={formData.quantity}
-              onChange={handleChange}
-              placeholder="Enter quantity"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {/* Submit Button */}
           <div className="flex justify-center">
             <Button type="submit" disabled={loading}>
               {loading ? 'Submitting...' : 'Submit Requisition'}

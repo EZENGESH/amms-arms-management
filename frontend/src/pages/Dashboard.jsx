@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
-import AdminLayout from "../layouts/AdminLayout";
 import { useNavigate } from "react-router-dom";
+import AdminLayout from "../layouts/AdminLayout";
 import { Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -19,7 +19,6 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({});
@@ -45,19 +44,19 @@ export default function Dashboard() {
           requisitionApi.get("/api/requisitions/"),
         ]);
 
-        const usersData = usersRes.data.results || usersRes.data || [];
-        const inventoryData = inventoryRes.data.results || inventoryRes.data || [];
-        const requisitionsData = requisitionsRes.data.results || requisitionsRes.data || [];
+        const users = usersRes.data.results || usersRes.data || [];
+        const inventory = inventoryRes.data.results || inventoryRes.data || [];
+        const requisitions = requisitionsRes.data.results || requisitionsRes.data || [];
 
-        // Stats
+        // Dashboard stats
         setStats({
-          totalArms: inventoryData.reduce((sum, arm) => sum + (arm.quantity || 1), 0),
-          activeRequisitions: requisitionsData.filter(r => r.status?.toLowerCase() === "pending").length,
-          registeredUsers: usersData.length,
+          totalArms: inventory.reduce((sum, arm) => sum + (arm.quantity || 1), 0),
+          activeRequisitions: requisitions.filter(r => r.status?.toLowerCase() === "pending").length,
+          registeredUsers: users.length,
         });
 
-        // Arms Chart
-        const typeCounts = inventoryData.reduce((acc, item) => {
+        // Arms chart
+        const typeCounts = inventory.reduce((acc, item) => {
           const type = item.type || "Unknown";
           acc[type] = (acc[type] || 0) + (item.quantity || 1);
           return acc;
@@ -73,8 +72,8 @@ export default function Dashboard() {
           ],
         });
 
-        // Requisition Chart
-        const statusCounts = requisitionsData.reduce((acc, r) => {
+        // Requisition chart
+        const statusCounts = requisitions.reduce((acc, r) => {
           const status = r.status || "Unknown";
           acc[status] = (acc[status] || 0) + 1;
           return acc;
@@ -90,15 +89,13 @@ export default function Dashboard() {
             {
               label: "Requisitions",
               data: Object.values(statusCounts),
-              backgroundColor: Object.keys(statusCounts).map(
-                s => chartColors[s] || "rgba(201,203,207,0.6)"
-              ),
+              backgroundColor: Object.keys(statusCounts).map(s => chartColors[s] || "rgba(201,203,207,0.6)"),
             },
           ],
         });
 
-        // Recent Activities
-        const sortedActivities = [...requisitionsData].sort(
+        // Recent activities
+        const sortedActivities = [...requisitions].sort(
           (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
         );
         setRecentActivities(sortedActivities.slice(0, 5));
@@ -122,24 +119,20 @@ export default function Dashboard() {
     responsive: true,
     plugins: { legend: { position: "top" }, title: { display: true, text: "Arms Inventory by Type" } },
   };
+
   const pieOptions = {
     responsive: true,
     plugins: { legend: { position: "top" }, title: { display: true, text: "Requisition Status" } },
   };
 
-  if (isLoading)
-    return (
-      <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>
-    );
+  if (isLoading) return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
 
   return (
     <AdminLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
-        {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">{error}</div>
-        )}
+        {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">{error}</div>}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -159,15 +152,11 @@ export default function Dashboard() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {armsData.labels.length > 0 && (
-            <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />
-          )}
-          {requisitionData.labels.length > 0 && (
-            <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />
-          )}
+          {armsData.labels.length > 0 && <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
+          {requisitionData.labels.length > 0 && <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activities */}
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-gray-700">Recent Activity</h2>
           {recentActivities.length > 0 ? (
@@ -179,9 +168,7 @@ export default function Dashboard() {
                     {new Date(activity.created_at || activity.date_created).toLocaleDateString()}
                   </span>
                 </div>
-                <p
-                  className={`text-sm ${statusColors[activity.status?.toLowerCase()] || "text-gray-600"}`}
-                >
+                <p className={`text-sm ${statusColors[activity.status?.toLowerCase()] || "text-gray-600"}`}>
                   Status: {activity.status} | By: {activity.name} ({activity.service_number})
                 </p>
               </div>

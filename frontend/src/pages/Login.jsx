@@ -22,21 +22,20 @@ export default function Login() {
 
     try {
       const response = await loginUser(credentials);
-      console.log("Login API response:", response);
 
-      // ✅ your backend sends `token` and `refresh_token`
-      if (!response?.token || !response?.refresh_token) {
+      // Check server response
+      if (!response?.access || !response?.refresh) {
         throw new Error("Invalid server response. Login failed.");
       }
 
-      // ✅ Normalize keys for interceptors
-      localStorage.setItem("access_token", response.token);
-      localStorage.setItem("refresh_token", response.refresh_token);
+      // Store tokens in localStorage for apiClient interceptors
+      localStorage.setItem("access_token", response.access);
+      localStorage.setItem("refresh_token", response.refresh);
 
-      // ✅ Pass full response to AuthContext
+      // Pass full response to AuthContext
       login(response);
     } catch (err) {
-      setError(err.message || "An unexpected error occurred.");
+      setError(err.response?.data?.detail || err.message || "Login failed.");
     } finally {
       setIsLoading(false);
     }
