@@ -8,9 +8,9 @@ import './styles/index.css';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
-      <AuthProvider>
+      <Adminlayout>
         <App />
-      </AuthProvider>
+      </Adminlayout>
     </Router>
   </React.StrictMode>
 );

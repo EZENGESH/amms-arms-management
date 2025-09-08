@@ -38,9 +38,10 @@ const handleAuthError = (error) => {
 // Auth services
 // ==============================
 
+// ✅ Registration
 export const registerUser = async (userData) => {
   try {
-    const response = await api.post('/api/users/register/', userData);
+    const response = await api.post('/api/registrations/', userData);
     return response.data;
   } catch (error) {
     const errorMessages = error.response?.data || {};
@@ -56,18 +57,21 @@ export const registerUser = async (userData) => {
   }
 };
 
+// ✅ Login
+// src/services/auth.js
 export const loginUser = async ({ username, password }) => {
   try {
-    const { data } = await api.post('/api/auth/login/', { username, password });
+    // FIX: use /api/v1/auth/login/ instead of /api/v1/auth/token/
+    const { data } = await api.post('/api/v1/auth/login/', { username, password });
 
     const user = {
-      token: data.access || data.token,
-      refresh_token: data.refresh || data.refresh_token,
-      user_id: data.user?.id || data.user_id || data.id,
-      username: data.user?.username || data.username || username,
-      email: data.user?.email || data.email || null,
-      service_number: data.user?.service_number || data.service_number || null,
-      rank: data.user?.rank || data.rank || null
+      token: data.access,               
+      refresh_token: data.refresh,      
+      user_id: data.user?.id,
+      username: data.user?.username,
+      email: data.user?.email,
+      service_number: data.user?.service_number,
+      rank: data.user?.rank,
     };
 
     localStorage.setItem('user', JSON.stringify(user));
@@ -80,9 +84,12 @@ export const loginUser = async ({ username, password }) => {
   }
 };
 
+
+// ✅ Logout
 export const logoutUser = async () => {
   try {
-    await api.post('/api/auth/logout/');
+    // Only works if backend has LogoutView
+    await api.post('/api/v1/auth/logout/');
   } catch (error) {
     console.error('Logout error:', error);
   } finally {
@@ -90,12 +97,16 @@ export const logoutUser = async () => {
   }
 };
 
+// ✅ Refresh token
 export const refreshToken = async () => {
   try {
     const refresh_token = localStorage.getItem('refresh_token');
     if (!refresh_token) throw new Error('No refresh token available');
 
-    const { data } = await api.post('/api/auth/token/refresh/', { refresh: refresh_token });
+    // Changed from /api/auth/token/refresh/ → /api/v1/auth/token/refresh/
+    const { data } = await api.post('/api/v1/auth/token/refresh/', {
+      refresh: refresh_token,
+    });
 
     localStorage.setItem('access_token', data.access);
     return { token: data.access, refresh_token };

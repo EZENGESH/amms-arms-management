@@ -5,7 +5,7 @@ export async function createRequisition(data) {
   try {
     console.log('Sending requisition data:', JSON.stringify(data, null, 2));
 
-    const response = await requisitionApi.post('api/requisitions/', data, {
+    const response = await requisitionApi.post('/requisitions/', data, {
       timeout: 15000, // Longer timeout for creation
     });
 

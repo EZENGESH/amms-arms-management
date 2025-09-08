@@ -7,3 +7,4 @@ redis==4.6.0
 gunicorn
 django-cors-headers
 requests
+djangorestframework-simplejwt

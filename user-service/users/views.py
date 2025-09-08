@@ -74,12 +74,12 @@ class ChangePasswordView(generics.GenericAPIView):
 
 
 class UserDetailView(APIView):
-    """Get the currently logged-in user's details."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
 
 
 # --- User Management Views ---

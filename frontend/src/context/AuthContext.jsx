@@ -26,12 +26,12 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // Login function
+  // ✅ Login function (matches your API)
 const login = (authData) => {
   const access = authData.access || authData.token;
   const refresh = authData.refresh || authData.refresh_token;
 
-  const userInfo = {
+  const userInfo = authData.user || {
     id: authData.user_id,
     username: authData.username,
     email: authData.email,
@@ -39,18 +39,16 @@ const login = (authData) => {
     rank: authData.rank,
   };
 
-  if (!access) {
-    throw new Error("No access token received from server");
-  }
+  if (!access) throw new Error("No access token received from server");
 
   localStorage.setItem("access_token", access);
   if (refresh) localStorage.setItem("refresh_token", refresh);
   localStorage.setItem("user", JSON.stringify(userInfo));
 
   setUser({ access, refresh, ...userInfo });
-
   navigate("/dashboard");
 };
+
 
   // Logout function
   const logout = () => {
@@ -61,18 +59,19 @@ const login = (authData) => {
     navigate("/login");
   };
 
-  // Refresh token function
+  // ✅ Refresh token function (your backend returns { token: "..." })
   const refreshToken = async () => {
     try {
       const storedRefresh = localStorage.getItem("refresh_token");
       if (!storedRefresh) throw new Error("No refresh token available");
 
       const data = await refreshTokenAPI(storedRefresh);
-      // Django SimpleJWT returns { access: "newAccessToken" }
-      localStorage.setItem("access_token", data.access);
 
-      setUser((prev) => ({ ...prev, access: data.access }));
-      return data.access;
+      // backend returns { token: "..." }
+      localStorage.setItem("access_token", data.token);
+
+      setUser((prev) => ({ ...prev, access: data.token }));
+      return data.token;
     } catch (err) {
       console.error("Refresh token failed:", err);
       logout();

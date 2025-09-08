@@ -45,34 +45,39 @@ const addRefreshInterceptor = (instance) => {
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
+
+      // Prevent infinite loop
+      if (originalRequest.url.includes("/token/refresh/")) {
+        forceLogout();
+        return Promise.reject(error);
+      }
+
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
         try {
           const refreshToken = localStorage.getItem("refresh_token");
           if (!refreshToken) {
-            console.error("No refresh token found. Logging out...");
             forceLogout();
             return Promise.reject(error);
           }
 
-          // Request new access token
-          const response = await axios.post(`${SERVICES.user}/api/auth/token/refresh/`, {
+          // ✅ Fixed: Added /v1/ to match Django
+          const response = await axios.post(`${SERVICES.user}/api/v1/auth/token/refresh/`, {
             refresh: refreshToken,
           });
 
           const newAccessToken = response.data.access;
           localStorage.setItem("access_token", newAccessToken);
 
-          // Retry the original request
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return instance(originalRequest);
         } catch (refreshError) {
-          console.error("Token refresh failed. Logging out...");
           forceLogout();
           return Promise.reject(refreshError);
         }
       }
+
       return Promise.reject(error);
     }
   );
@@ -120,9 +125,10 @@ export const api = createServiceInstance(SERVICES.user, "User");
 export const inventoryApi = createServiceInstance(SERVICES.inventory, "Inventory");
 export const requisitionApi = createServiceInstance(SERVICES.requisition, "Requisition");
 export const logfirearmapi = createServiceInstance(SERVICES.firearmLog, "Firearm Log");
+
 export default {
   api,
   inventoryApi,
   requisitionApi,
-  logfirearmapi
+  logfirearmapi,
 };

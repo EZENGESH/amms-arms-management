@@ -1,12 +1,3 @@
-"""
-Django settings for user_service project.
-
-For production, set DJANGO_DEBUG=False and configure these environment variables:
-- DJANGO_SECRET_KEY
-- DJANGO_ALLOWED_HOSTS (comma-separated)
-- Database credentials
-- Celery broker URL
-"""
 
 from pathlib import Path
 from decouple import config, Csv
