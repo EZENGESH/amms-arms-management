@@ -22,15 +22,15 @@ export default function Login() {
 
     try {
       const response = await loginUser(credentials);
-
+      console.log("Login response:", response);
       // Check server response
-      if (!response?.access || !response?.refresh) {
+      if (!response?.token || !response?.refresh_token) {
         throw new Error("Invalid server response. Login failed.");
       }
 
       // Store tokens in localStorage for apiClient interceptors
-      localStorage.setItem("access_token", response.access);
-      localStorage.setItem("refresh_token", response.refresh);
+      localStorage.setItem("access_token", response.token);
+      localStorage.setItem("refresh_token", response.refresh_token);
 
       // Pass full response to AuthContext
       login(response);

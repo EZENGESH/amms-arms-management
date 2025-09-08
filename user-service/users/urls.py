@@ -12,7 +12,7 @@ urlpatterns = [
 
     # User Management
     path('users/', views.UserListView.as_view(), name='user-list-admin'),
-    path('users/profile/', views.UserProfileView.as_view(), name='user-profile'),
+    path('profile/', views.UserProfileView.as_view(), name='user-profile'),
     path('users/profile/update/', views.UpdateProfileView.as_view(), name='update-profile'),
     path('users/<int:pk>/', views.UserRetrieveDeleteView.as_view(), name='user-detail-admin'),
     path('users/<int:pk>/update/', views.UserUpdateView.as_view(), name='user-update-admin'),
