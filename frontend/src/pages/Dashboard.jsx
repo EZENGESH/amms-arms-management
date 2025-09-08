@@ -96,7 +96,8 @@ export default function Dashboard() {
 
         // ===== Recent Activities =====
         const sortedActivities = [...requisitions].sort(
-          (a, b) => new Date(b.created_at || b.date_created || 0) - new Date(a.created_at || a.date_created || 0)
+          (a, b) =>
+            new Date(b.created_at || b.date_created || 0) - new Date(a.created_at || a.date_created || 0)
         );
         setRecentActivities(sortedActivities.slice(0, 5));
       } catch (err) {
@@ -115,14 +116,17 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [navigate]);
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
+  if (isLoading)
+    return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
 
   return (
     <AdminLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
-        {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">{error}</div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard title="Total Arms" value={stats.totalArms} />
@@ -131,8 +135,32 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {armsData.labels.length > 0 && <ChartWrapper chart={<Bar data={armsData} options={{ responsive: true, plugins: { legend: { position: "top" }, title: { display: true, text: "Arms Inventory by Type" } } }} />} />}
-          {requisitionData.labels.length > 0 && <ChartWrapper chart={<Pie data={requisitionData} options={{ responsive: true, plugins: { legend: { position: "top" }, title: { display: true, text: "Requisition Status" } } }} />} />}
+          {armsData.labels.length > 0 && (
+            <ChartWrapper
+              chart={
+                <Bar
+                  data={armsData}
+                  options={{
+                    responsive: true,
+                    plugins: { legend: { position: "top" }, title: { display: true, text: "Arms Inventory by Type" } },
+                  }}
+                />
+              }
+            />
+          )}
+          {requisitionData.labels.length > 0 && (
+            <ChartWrapper
+              chart={
+                <Pie
+                  data={requisitionData}
+                  options={{
+                    responsive: true,
+                    plugins: { legend: { position: "top" }, title: { display: true, text: "Requisition Status" } },
+                  }}
+                />
+              }
+            />
+          )}
         </div>
 
         <RecentActivities activities={recentActivities} statusColors={statusColors} />

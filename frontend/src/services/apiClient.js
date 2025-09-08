@@ -1,10 +1,10 @@
 import axios from "axios";
 
 const SERVICES = {
-  user: "http://localhost:8001",
-  inventory: "http://localhost:8009",
-  requisition: "http://localhost:8003",
-  firearmLog: "http://localhost:8009",
+  user: "http://localhost:8001/api/v1",
+  inventory: "http://localhost:8009/api",
+  requisition: "http://localhost:8003/api",
+  firearmLog: "http://localhost:8009/api",
 };
 
 const forceLogout = () => {
@@ -48,7 +48,7 @@ const attachRefresh = (instance) => {
 
         try {
           const { data } = await axios.post(
-            `${SERVICES.user}/api/v1/auth/token/refresh/`,
+            `${SERVICES.user}/auth/token/refresh/`,
             { refresh: refreshToken }
           );
           localStorage.setItem("access_token", data.access);
@@ -96,6 +96,7 @@ const createService = (baseURL, serviceName) => {
   return instance;
 };
 
+// Export properly configured service instances
 export const api = createService(SERVICES.user, "User");
 export const inventoryApi = createService(SERVICES.inventory, "Inventory");
 export const requisitionApi = createService(SERVICES.requisition, "Requisition");

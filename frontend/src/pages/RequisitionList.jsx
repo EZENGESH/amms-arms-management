@@ -10,7 +10,7 @@ export default function RequisitionList() {
   useEffect(() => {
     const fetchRequisitions = async () => {
       try {
-        const response = await requisitionApi.get('/requisitions/');         setRequisitions(response.data);
+        const response = await requisitionApi.get('api/requisitions/');         setRequisitions(response.data);
       } catch (error) {
         console.error('Error fetching requisitions:', error);
       } finally {
