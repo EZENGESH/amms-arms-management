@@ -21,7 +21,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [stats, setStats] = useState({ totalArms: 0, activeRequisitions: 0, registeredUsers: 0 });
+  const [stats, setStats] = useState({
+    totalArms: 0,
+    activeRequisitions: 0,
+    registeredUsers: 0,
+  });
   const [armsData, setArmsData] = useState({ labels: [], datasets: [] });
   const [requisitionData, setRequisitionData] = useState({ labels: [], datasets: [] });
   const [recentActivities, setRecentActivities] = useState([]);
@@ -38,6 +42,7 @@ export default function Dashboard() {
       setError(null);
 
       try {
+        // Fetch users, inventory, and requisitions concurrently
         const [usersRes, inventoryRes, requisitionsRes] = await Promise.all([
           api.get("/api/v1/users/"),
           inventoryApi.get("/api/arms/"),
@@ -48,7 +53,7 @@ export default function Dashboard() {
         const inventory = inventoryRes.data.results || inventoryRes.data || [];
         const requisitions = requisitionsRes.data.results || requisitionsRes.data || [];
 
-        // ===== Stats =====
+        // ===== Stats calculation =====
         setStats({
           totalArms: inventory.reduce((sum, arm) => sum + (arm.quantity || 1), 0),
           activeRequisitions: requisitions.filter(r => r.status?.toLowerCase() === "pending").length,
@@ -89,7 +94,9 @@ export default function Dashboard() {
             {
               label: "Requisitions",
               data: Object.values(statusCounts),
-              backgroundColor: Object.keys(statusCounts).map(s => chartColors[s] || "rgba(201,203,207,0.6)"),
+              backgroundColor: Object.keys(statusCounts).map(
+                s => chartColors[s] || "rgba(201,203,207,0.6)"
+              ),
             },
           ],
         });
@@ -117,7 +124,11 @@ export default function Dashboard() {
   }, [navigate]);
 
   if (isLoading)
-    return <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen text-lg">
+        Loading Dashboard...
+      </div>
+    );
 
   return (
     <AdminLayout>
@@ -125,15 +136,19 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard Overview</h1>
 
         {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">{error}</div>
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+            {error}
+          </div>
         )}
 
+        {/* ===== Stats Cards ===== */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard title="Total Arms" value={stats.totalArms} />
           <StatCard title="Active Requisitions" value={stats.activeRequisitions} />
           <StatCard title="Registered Users" value={stats.registeredUsers} />
         </div>
 
+        {/* ===== Charts ===== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {armsData.labels.length > 0 && (
             <ChartWrapper
@@ -142,7 +157,10 @@ export default function Dashboard() {
                   data={armsData}
                   options={{
                     responsive: true,
-                    plugins: { legend: { position: "top" }, title: { display: true, text: "Arms Inventory by Type" } },
+                    plugins: {
+                      legend: { position: "top" },
+                      title: { display: true, text: "Arms Inventory by Type" },
+                    },
                   }}
                 />
               }
@@ -155,7 +173,10 @@ export default function Dashboard() {
                   data={requisitionData}
                   options={{
                     responsive: true,
-                    plugins: { legend: { position: "top" }, title: { display: true, text: "Requisition Status" } },
+                    plugins: {
+                      legend: { position: "top" },
+                      title: { display: true, text: "Requisition Status" },
+                    },
                   }}
                 />
               }
@@ -163,6 +184,7 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* ===== Recent Activities ===== */}
         <RecentActivities activities={recentActivities} statusColors={statusColors} />
       </div>
     </AdminLayout>
@@ -186,7 +208,9 @@ const RecentActivities = ({ activities, statusColors }) => (
       activities.map((activity) => (
         <div key={activity.id || activity.pk} className="border-b pb-3 mb-3">
           <div className="flex justify-between">
-            <p className="font-medium">New Requisition: {activity.firearm_type || "N/A"}</p>
+            <p className="font-medium">
+              New Requisition: {activity.firearm_type || "N/A"}
+            </p>
             <span className="text-sm text-gray-500">
               {new Date(activity.created_at || activity.date_created || Date.now()).toLocaleDateString()}
             </span>

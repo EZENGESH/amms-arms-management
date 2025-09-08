@@ -1,12 +1,28 @@
 import axios from "axios";
 
+// =========================
+// Service URLs
+// =========================
 const SERVICES = {
-  user: "http://localhost:8001",          // add /api if your Django URLs are prefixed
-  inventory: "http://localhost:8009/",
-  requisition: "http://localhost:8003/",
-  firearmLog: "http://localhost:8009/",
+  user: "http://localhost:8001",        // Adjust "/api" if needed
+  inventory: "http://localhost:8009",
+  requisition: "http://localhost:8003",
+  firearmLog: "http://localhost:8009",
 };
 
+// =========================
+// Force logout
+// =========================
+const forceLogout = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+};
+
+// =========================
+// Attach access token
+// =========================
 const attachToken = (instance) => {
   instance.interceptors.request.use(
     (config) => {
@@ -18,19 +34,19 @@ const attachToken = (instance) => {
   );
 };
 
+// =========================
+// Attach refresh token logic
+// =========================
 const attachRefresh = (instance) => {
   instance.interceptors.response.use(
-    (response) => response,
+    (res) => res,
     async (error) => {
       const originalRequest = error.config;
 
-      // Prevent infinite loop
-      if (originalRequest.url.includes("/auth/token/refresh/")) {
-        forceLogout();
-        return Promise.reject(error);
-      }
+      // Avoid infinite refresh loop
+      if (originalRequest._retry) return Promise.reject(error);
 
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (error.response?.status === 401) {
         originalRequest._retry = true;
         const refreshToken = localStorage.getItem("refresh_token");
 
@@ -41,13 +57,15 @@ const attachRefresh = (instance) => {
 
         try {
           const { data } = await axios.post(
-            `${SERVICES.user}api/v1/auth/token/refresh/`, // Adjust to your backend endpoint
+            `${SERVICES.user}/api/v1/auth/token/refresh/`,
             { refresh: refreshToken }
           );
+
           localStorage.setItem("access_token", data.access);
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return instance(originalRequest);
         } catch (err) {
+          forceLogout();
           return Promise.reject(err);
         }
       }
@@ -57,15 +75,18 @@ const attachRefresh = (instance) => {
   );
 };
 
+// =========================
+// Attach error logging
+// =========================
 const attachErrorLogging = (instance, name) => {
   instance.interceptors.response.use(
-    (response) => response,
+    (res) => res,
     (error) => {
       if (!error.response) {
         console.error(`${name} Service: Network error or service down.`);
       } else {
         console.error(
-          `${name} Service Error: ${error.response.status} ${error.config.method.toUpperCase()} ${error.config.url}`,
+          `${name} Service Error: [${error.response.status}] ${error.config.method.toUpperCase()} ${error.config.url}`,
           error.response.data
         );
       }
@@ -74,6 +95,9 @@ const attachErrorLogging = (instance, name) => {
   );
 };
 
+// =========================
+// Create axios instance
+// =========================
 const createService = (baseURL, serviceName) => {
   const instance = axios.create({
     baseURL,
@@ -88,7 +112,9 @@ const createService = (baseURL, serviceName) => {
   return instance;
 };
 
-// Export API instances
+// =========================
+// Export services
+// =========================
 export const api = createService(SERVICES.user, "User");
 export const inventoryApi = createService(SERVICES.inventory, "Inventory");
 export const requisitionApi = createService(SERVICES.requisition, "Requisition");
