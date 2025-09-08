@@ -31,7 +31,7 @@ export default function Dashboard() {
   const API_BASE_URL = {
     inventory: "http://localhost:8009/api/arms/",
     requisitions: "http://localhost:8003/api/requisitions/",
-    users: "http://localhost:8001/api/users/",
+    users: "http://localhost:8001/api/v1/users/",
   };
 
   // Attach token to axios
