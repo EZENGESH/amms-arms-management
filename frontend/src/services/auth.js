@@ -66,7 +66,7 @@ export const loginUser = async ({ username, password }) => {
 
     setAuthStorage({ token: data.access, refresh_token: data.refresh, user });
 
-    return { access: data.token, refresh: data.refresh_token, user };
+    return { access: data.access, refresh: data.refresh, user };
   } catch (err) {
     handleAuthError(err);
   }

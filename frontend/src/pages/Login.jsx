@@ -24,7 +24,7 @@ export default function Login() {
       const response = await loginUser(credentials);
       console.log("Login response:", response);
       // Check server response
-      if (!response?.token || !response?.refresh_token) {
+      if (!response?.access || !response?.refresh) {
         throw new Error("Invalid server response. Login failed.");
       }
 
