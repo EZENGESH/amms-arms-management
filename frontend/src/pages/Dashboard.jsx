@@ -20,7 +20,6 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // State
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({});
@@ -32,16 +31,21 @@ export default function Dashboard() {
   const API_BASE_URL = {
     inventory: "http://localhost:8009/api/arms/",
     requisitions: "http://localhost:8003/api/requisitions/",
+    users: "http://localhost:8001/api/users/",
   };
 
-  // Status colors
+  // Attach token to axios
+  const token = localStorage.getItem("token");
+  const axiosConfig = {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+
   const statusColors = {
     approved: "text-green-600",
     pending: "text-yellow-600",
     rejected: "text-red-600",
   };
 
-  // Fetch dashboard data
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -49,8 +53,9 @@ export default function Dashboard() {
 
       try {
         const [usersRes, inventoryRes, requisitionsRes] = await Promise.all([
-          axios.get(API_BASE_URL.inventory),
-          axios.get(API_BASE_URL.requisitions),
+          axios.get(API_BASE_URL.users, axiosConfig),
+          axios.get(API_BASE_URL.inventory, axiosConfig),
+          axios.get(API_BASE_URL.requisitions, axiosConfig),
         ]);
 
         const usersData = usersRes.data.results || usersRes.data || [];
@@ -64,7 +69,7 @@ export default function Dashboard() {
           registeredUsers: usersData.length,
         });
 
-        // Arms Chart
+        // Arms chart
         const typeCounts = inventoryData.reduce((acc, item) => {
           const type = item.type || "Unknown";
           acc[type] = (acc[type] || 0) + (item.quantity || 1);
@@ -72,14 +77,16 @@ export default function Dashboard() {
         }, {});
         setArmsData({
           labels: Object.keys(typeCounts),
-          datasets: [{
-            label: "Number of Items",
-            data: Object.values(typeCounts),
-            backgroundColor: "rgba(53, 162, 235, 0.5)",
-          }],
+          datasets: [
+            {
+              label: "Number of Items",
+              data: Object.values(typeCounts),
+              backgroundColor: "rgba(53, 162, 235, 0.5)",
+            },
+          ],
         });
 
-        // Requisition Chart
+        // Requisition chart
         const statusCounts = requisitionsData.reduce((acc, r) => {
           const status = r.status || "Unknown";
           acc[status] = (acc[status] || 0) + 1;
@@ -92,14 +99,16 @@ export default function Dashboard() {
         };
         setRequisitionData({
           labels: Object.keys(statusCounts),
-          datasets: [{
-            label: "Requisitions",
-            data: Object.values(statusCounts),
-            backgroundColor: Object.keys(statusCounts).map(s => chartColors[s] || "rgba(201,203,207,0.6)"),
-          }],
+          datasets: [
+            {
+              label: "Requisitions",
+              data: Object.values(statusCounts),
+              backgroundColor: Object.keys(statusCounts).map(s => chartColors[s] || "rgba(201,203,207,0.6)"),
+            },
+          ],
         });
 
-        // Recent Activities
+        // Recent activities (latest 5)
         const sortedActivities = [...requisitionsData].sort(
           (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
         );
@@ -120,27 +129,18 @@ export default function Dashboard() {
     fetchData();
   }, [navigate]);
 
-  // Chart options
   const barOptions = {
     responsive: true,
-    plugins: {
-      legend: { position: "top" },
-      title: { display: true, text: "Arms Inventory by Type" },
-    },
+    plugins: { legend: { position: "top" }, title: { display: true, text: "Arms Inventory by Type" } },
   };
   const pieOptions = {
     responsive: true,
-    plugins: {
-      legend: { position: "top" },
-      title: { display: true, text: "Requisition Status" },
-    },
+    plugins: { legend: { position: "top" }, title: { display: true, text: "Requisition Status" } },
   };
 
   if (isLoading)
     return (
-      <div className="flex justify-center items-center h-screen text-lg">
-        Loading Dashboard...
-      </div>
+      <div className="flex justify-center items-center h-screen text-lg">Loading Dashboard...</div>
     );
 
   return (
@@ -170,15 +170,11 @@ export default function Dashboard() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {armsData.labels.length > 0 && (
-            <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />
-          )}
-          {requisitionData.labels.length > 0 && (
-            <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />
-          )}
+          {armsData.labels.length > 0 && <Bar data={armsData} options={barOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
+          {requisitionData.labels.length > 0 && <Pie data={requisitionData} options={pieOptions} className="bg-white p-6 rounded-xl shadow-sm" />}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activities */}
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-gray-700">Recent Activity</h2>
           {recentActivities.length > 0 ? (
