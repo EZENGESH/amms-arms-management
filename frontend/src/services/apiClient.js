@@ -106,13 +106,7 @@ const createService = (baseURL, serviceName) => {
     timeout: 10000,
   });
 
-  requisitionApi.interceptors.request.use((config) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
+  
 
   attachToken(instance);
   attachRefresh(instance);
@@ -128,6 +122,14 @@ export const api = createService(SERVICES.user, "User");
 export const inventoryApi = createService(SERVICES.inventory, "Inventory");
 export const requisitionApi = createService(SERVICES.requisition, "Requisition");
 export const firearmApi = createService(SERVICES.firearmLog, "Firearm Log");
+
+requisitionApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default {
   api,
