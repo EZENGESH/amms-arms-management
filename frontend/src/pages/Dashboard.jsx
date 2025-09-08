@@ -41,7 +41,7 @@ export default function Dashboard() {
         const [usersRes, inventoryRes, requisitionsRes] = await Promise.all([
           api.get("/api/v1/users/"),
           inventoryApi.get("/api/v1/arms/"),
-          requisitionApi.get("/api/v1/requisitions/"),
+          requisitionApi.get("/api/requisitions/"),
         ]);
 
         const users = usersRes.data.results || usersRes.data || [];
