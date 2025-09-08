@@ -8,6 +8,7 @@ urlpatterns = [
     path('auth/logout/', views.LogoutView.as_view(), name='logout'),
     path('auth/change-password/', views.ChangePasswordView.as_view(), name='change-password'),
     path('auth/user/', views.UserDetailView.as_view(), name='auth-user-detail'),
+    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 
     # User Management
     path('users/', views.UserListView.as_view(), name='user-list-admin'),

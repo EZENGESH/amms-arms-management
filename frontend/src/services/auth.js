@@ -61,7 +61,6 @@ export const registerUser = async (userData) => {
 // src/services/auth.js
 export const loginUser = async ({ username, password }) => {
   try {
-    // FIX: use /api/v1/auth/login/ instead of /api/v1/auth/token/
     const { data } = await api.post('/api/v1/auth/login/', { username, password });
 
     const user = {
@@ -88,7 +87,6 @@ export const loginUser = async ({ username, password }) => {
 // ✅ Logout
 export const logoutUser = async () => {
   try {
-    // Only works if backend has LogoutView
     await api.post('/api/v1/auth/logout/');
   } catch (error) {
     console.error('Logout error:', error);
@@ -102,8 +100,6 @@ export const refreshToken = async () => {
   try {
     const refresh_token = localStorage.getItem('refresh_token');
     if (!refresh_token) throw new Error('No refresh token available');
-
-    // Changed from /api/auth/token/refresh/ → /api/v1/auth/token/refresh/
     const { data } = await api.post('/api/v1/auth/token/refresh/', {
       refresh: refresh_token,
     });
