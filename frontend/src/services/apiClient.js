@@ -7,14 +7,6 @@ const SERVICES = {
   firearmLog: "http://localhost:8009/",
 };
 
-const forceLogout = () => {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  if (window.location.pathname !== "/login") {
-    window.location.href = "/login";
-  }
-};
-
 const attachToken = (instance) => {
   instance.interceptors.request.use(
     (config) => {
