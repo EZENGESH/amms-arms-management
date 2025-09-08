@@ -48,7 +48,7 @@ const attachRefresh = (instance) => {
 
         try {
           const { data } = await axios.post(
-            `${SERVICES.user}/auth/token/refresh/`,
+            `${SERVICES.user}/api/v1/auth/token/refresh/`,
             { refresh: refreshToken }
           );
           localStorage.setItem("access_token", data.access);
