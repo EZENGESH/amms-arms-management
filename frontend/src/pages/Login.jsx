@@ -21,22 +21,23 @@ export default function Login() {
       password: formData.get('password'),
     };
 
-    try {
-      const response = await loginUser(credentials); // your API call
-      
-      // FIX: Check for 'access' token, which is the JWT standard.
-      
-      if (!response?.access) {
-        throw new Error('Invalid server response. Login failed.');
-      }
+try {
+  const response = await loginUser(credentials);
 
-      // FIX: Call the context's login function with the entire response object.
-      // The context will handle extracting the tokens and user data.
-      login(response);
+  console.log("Login API response:", response); // full axios response
+  console.log("Login API data:", response.data); // actual JSON from backend
 
-    } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
-    } finally {
+  const data = response.data; // 👈 extract JSON body
+
+  if (!data?.access) {
+    throw new Error("Invalid server response. Login failed.");
+  }
+
+  login(data);
+} catch (err) {
+  setError(err.response?.data?.detail || err.message || "An unexpected error occurred.");
+}
+ finally {
       setIsLoading(false);
     }
   };

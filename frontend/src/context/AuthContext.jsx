@@ -11,14 +11,14 @@ export function AuthProvider({ children }) {
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const accessToken = localStorage.getItem("access_token");
-    const refreshToken = localStorage.getItem("refresh_token");
+    const access = localStorage.getItem("access_token");
+    const refresh = localStorage.getItem("refresh_token");
     const storedUser = localStorage.getItem("user");
 
-    if (accessToken && refreshToken && storedUser) {
+    if (access && refresh && storedUser) {
       setUser({
-        token: accessToken,
-        refreshToken: refreshToken,
+        access,
+        refresh,
         ...JSON.parse(storedUser),
       });
     }
@@ -27,24 +27,30 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Login function
-  const login = (authData) => {
-    const userInfo = {
-      id: authData.user_id,
-      username: authData.username,
-      email: authData.email,
-      service_number: authData.service_number,
-      rank: authData.rank,
-    };
+const login = (authData) => {
+  const access = authData.access || authData.token;
+  const refresh = authData.refresh || authData.refresh_token;
 
-    // Store tokens & user info
-    localStorage.setItem("access_token", authData.token);
-    if (authData.refresh_token) localStorage.setItem("refresh_token", authData.refresh_token);
-    localStorage.setItem("user", JSON.stringify(userInfo));
-
-    setUser({ token: authData.token, refreshToken: authData.refresh_token, ...userInfo });
-
-    navigate("/dashboard");
+  const userInfo = {
+    id: authData.user_id,
+    username: authData.username,
+    email: authData.email,
+    service_number: authData.service_number,
+    rank: authData.rank,
   };
+
+  if (!access) {
+    throw new Error("No access token received from server");
+  }
+
+  localStorage.setItem("access_token", access);
+  if (refresh) localStorage.setItem("refresh_token", refresh);
+  localStorage.setItem("user", JSON.stringify(userInfo));
+
+  setUser({ access, refresh, ...userInfo });
+
+  navigate("/dashboard");
+};
 
   // Logout function
   const logout = () => {
@@ -62,10 +68,11 @@ export function AuthProvider({ children }) {
       if (!storedRefresh) throw new Error("No refresh token available");
 
       const data = await refreshTokenAPI(storedRefresh);
-      localStorage.setItem("access_token", data.token);
+      // Django SimpleJWT returns { access: "newAccessToken" }
+      localStorage.setItem("access_token", data.access);
 
-      setUser((prev) => ({ ...prev, token: data.token }));
-      return data.token;
+      setUser((prev) => ({ ...prev, access: data.access }));
+      return data.access;
     } catch (err) {
       console.error("Refresh token failed:", err);
       logout();
@@ -74,7 +81,16 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshToken, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout,
+        refreshToken,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
