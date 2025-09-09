@@ -22,6 +22,7 @@ COPY . .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+RUN python manage.py collectstatic --noinput
 # Startup command
 CMD bash -c "echo 'Waiting for database...'; \
 while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
