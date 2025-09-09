@@ -16,4 +16,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/health/', health_check),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+] if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
