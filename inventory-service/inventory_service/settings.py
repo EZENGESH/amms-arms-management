@@ -56,7 +56,9 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'inventory_service.urls'
@@ -80,7 +82,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'inventory_service.wsgi.application'
 
 # Database
-# ...existing code...
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -92,7 +93,6 @@ DATABASES = {
         'OPTIONS': {
             'charset': 'utf8mb4',
             'connect_timeout': 30,
-            # Matches db.env plugin
             'auth_plugin': 'mysql_native_password',
         }
     }
