@@ -17,7 +17,12 @@ services:
         do echo 'Waiting for user-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+        if [ '$$DJANGO_ENV' = 'production' ];
+        then
+          gunicorn user_service.wsgi:application --bind 0.0.0.0:8000 --workers 4;
+        else
+          python manage.py runserver 0.0.0.0:8000 --insecure;
+        fi"
     volumes:
       - staticfiles:/app/staticfiles
     depends_on:
@@ -63,7 +68,12 @@ services:
         do echo 'Waiting for inventory-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+        if [ '$$DJANGO_ENV' = 'production' ];
+        then
+          gunicorn inventory_service.wsgi:application --bind 0.0.0.0:8000 --workers 4;
+        else
+          python manage.py runserver 0.0.0.0:8000 --insecure;
+        fi"
     volumes:
       - staticfiles:/app/staticfiles
     depends_on:
@@ -105,11 +115,13 @@ services:
       sh -c "
         until nc -z requisition-db 3306;
         do echo 'Waiting for requisition-db...'; sleep 2; done;
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
         if [ '$$DJANGO_ENV' = 'production' ];
         then
           gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 4;
         else
-          python manage.py runserver 0.0.0.0:8000;
+          python manage.py runserver 0.0.0.0:8000 --insecure;
         fi"
     volumes:
       - staticfiles:/app/staticfiles
@@ -154,7 +166,12 @@ services:
         do echo 'Waiting for reporting-db...'; sleep 2; done;
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+        if [ '$$DJANGO_ENV' = 'production' ];
+        then
+          gunicorn reporting_service.wsgi:application --bind 0.0.0.0:8000 --workers 4;
+        else
+          python manage.py runserver 0.0.0.0:8000 --insecure;
+        fi"
     volumes:
       - staticfiles:/app/staticfiles
     depends_on:
@@ -177,7 +194,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -214,7 +231,7 @@ services:
     restart: always
 
   # ========================
-  # Frontend (PRODUCTION SETUP - RECOMMENDED)
+  # Frontend (Dev mode shown here)
   # ========================
   frontend:
     build: 
