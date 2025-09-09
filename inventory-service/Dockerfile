@@ -1,12 +1,17 @@
 FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+# -----------------------------
+# Environment setup
+# -----------------------------
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/usr/local/bin:$PATH"
 
 WORKDIR /app
 
-# Install system dependencies including pkg-config and build tools
+# -----------------------------
+# Install system dependencies
+# -----------------------------
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     pkg-config \
@@ -15,15 +20,26 @@ RUN apt-get update && \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy application files
+# -----------------------------
+# Install Python dependencies
+# -----------------------------
+COPY requirements.txt .
+RUN python -m pip install --no-cache-dir --upgrade pip && \
+    python -m pip install --no-cache-dir -r requirements.txt
+
+# -----------------------------
+# Copy project files
+# -----------------------------
 COPY . .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
+# -----------------------------
+# Collect static files
+# -----------------------------
 RUN python manage.py collectstatic --noinput
-# Startup command
+
+# -----------------------------
+# Startup script
+# -----------------------------
 CMD bash -c "echo 'Waiting for database...'; \
 while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
   sleep 1; \
