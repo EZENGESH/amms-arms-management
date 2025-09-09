@@ -14,17 +14,46 @@ import {
   Legend,
 } from "chart.js";
 import { api, inventoryApi, requisitionApi } from "../services/apiClient";
-import {
-  FiUsers,
-  FiPieChart,
-  FiClipboard,
-  FiActivity,
-  FiArrowUp,
-  FiArrowDown,
-  FiRefreshCw
-} from "react-icons/fi";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+
+// SVG Icons
+const UsersIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+);
+
+const PieChartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+  </svg>
+);
+
+const ClipboardIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+  </svg>
+);
+
+const ActivityIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+  </svg>
+);
+
+const RefreshIcon = ({ spinning }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={`h-5 w-5 ${spinning ? "animate-spin" : ""}`}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+);
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -42,17 +71,15 @@ export default function Dashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
 
   const statusColors = {
-    approved: "bg-green-100 text-green-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    rejected: "bg-red-100 text-red-800",
-    completed: "bg-blue-100 text-blue-800",
+    approved: "bg-green-100 text-green-800 border-green-200",
+    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    rejected: "bg-red-100 text-red-800 border-red-200",
   };
 
   const statusIcons = {
     approved: "✅",
     pending: "⏳",
     rejected: "❌",
-    completed: "✅",
   };
 
   const fetchDashboardData = async () => {
@@ -131,7 +158,6 @@ export default function Dashboard() {
         Approved: "rgba(75, 192, 192, 0.8)",
         Pending: "rgba(255, 206, 86, 0.8)",
         Rejected: "rgba(255, 99, 132, 0.8)",
-        Completed: "rgba(153, 102, 255, 0.8)",
       };
 
       setRequisitionData({
@@ -203,8 +229,8 @@ export default function Dashboard() {
             disabled={isRefreshing}
             className="flex items-center mt-4 sm:mt-0 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
           >
-            <FiRefreshCw className={`mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-            {isRefreshing ? "Refreshing..." : "Refresh Data"}
+            <RefreshIcon spinning={isRefreshing} />
+            <span className="ml-2">{isRefreshing ? "Refreshing..." : "Refresh Data"}</span>
           </button>
         </div>
 
@@ -221,20 +247,17 @@ export default function Dashboard() {
           <StatCard
             title="Total Arms"
             value={stats.totalArms}
-            icon={<FiPieChart className="text-blue-500" />}
-            change={stats.totalArms - (stats.previousStats.totalArms || 0)}
+            icon={<PieChartIcon />}
           />
           <StatCard
             title="Active Requisitions"
             value={stats.activeRequisitions}
-            icon={<FiClipboard className="text-yellow-500" />}
-            change={stats.activeRequisitions - (stats.previousStats.activeRequisitions || 0)}
+            icon={<ClipboardIcon />}
           />
           <StatCard
             title="Registered Users"
             value={stats.registeredUsers}
-            icon={<FiUsers className="text-green-500" />}
-            change={stats.registeredUsers - (stats.previousStats.registeredUsers || 0)}
+            icon={<UsersIcon />}
           />
         </div>
 
@@ -318,30 +341,19 @@ export default function Dashboard() {
 }
 
 // ===== Subcomponents =====
-const StatCard = ({ title, value, icon, change }) => {
-  const changeValue = change || 0;
-  const isPositive = changeValue >= 0;
-
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-gray-500 text-sm font-medium">{title}</p>
-          <p className="text-3xl font-bold mt-2 text-gray-800">{value.toLocaleString()}</p>
-          {change !== undefined && (
-            <div className={`flex items-center mt-2 text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {isPositive ? <FiArrowUp className="mr-1" /> : <FiArrowDown className="mr-1" />}
-              <span>{Math.abs(changeValue)} from last refresh</span>
-            </div>
-          )}
-        </div>
-        <div className="p-3 rounded-lg bg-gray-100">
-          {icon}
-        </div>
+const StatCard = ({ title, value, icon }) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex justify-between items-start">
+      <div>
+        <p className="text-gray-500 text-sm font-medium">{title}</p>
+        <p className="text-3xl font-bold mt-2 text-gray-800">{value.toLocaleString()}</p>
+      </div>
+      <div className="p-3 rounded-lg bg-gray-100">
+        {icon}
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 const ChartWrapper = ({ title, chart }) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -354,8 +366,8 @@ const RecentActivities = ({ activities, statusColors, statusIcons }) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-        <FiActivity className="mr-2 text-blue-500" />
-        Recent Activity
+        <ActivityIcon />
+        <span className="ml-2">Recent Activity</span>
       </h2>
       <span className="text-sm text-gray-500">{activities.length} activities</span>
     </div>
@@ -380,7 +392,7 @@ const RecentActivities = ({ activities, statusColors, statusIcons }) => (
                 </span>
               </div>
               <div className="mt-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[status] || "bg-gray-100 text-gray-800"}`}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[status] || "bg-gray-100 text-gray-800 border-gray-200"}`}>
                   Status: {activity.status || "Unknown"}
                 </span>
               </div>
