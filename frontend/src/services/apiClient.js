@@ -1,10 +1,10 @@
 import axios from "axios";
 
 const SERVICES = {
-  user: "http://localhost:8001/api/v1/",         
-  inventory: "http://localhost:8009/api/",
-  requisition: "http://localhost:8003/api",
-  firearmLog: "http://localhost:8009/api",
+  user: "http://localhost:8001/",         
+  inventory: "http://localhost:8009/",
+  requisition: "http://localhost:8003/",
+  firearmLog: "http://localhost:8009/",
 };
 
 const attachToken = (instance) => {
