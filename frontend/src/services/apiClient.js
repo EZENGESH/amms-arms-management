@@ -91,7 +91,7 @@ const createService = (baseURL, serviceName) => {
 // Export API instances
 export const api = createService(SERVICES.user, "User");
 export const inventoryApi = createService(SERVICES.inventory, "Inventory");
-export const requisitionApi = createService(SERVICES.requisition +"api", "Requisition");
+export const requisitionApi = createService(SERVICES.requisition, "Requisition");
 export const firearmApi = createService(SERVICES.firearmLog, "Firearm Log");
 
 export default { api, inventoryApi, requisitionApi, firearmApi };
