@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const SERVICES = {
-  user: "http://localhost:8001",          // add /api if your Django URLs are prefixed
+  user: "http://localhost:8001",         
   inventory: "http://localhost:8009/",
   requisition: "http://localhost:8003/",
   firearmLog: "http://localhost:8009/",
@@ -41,7 +41,7 @@ const attachRefresh = (instance) => {
 
         try {
           const { data } = await axios.post(
-            `${SERVICES.user}api/v1/auth/token/refresh/`, // Adjust to your backend endpoint
+            `${SERVICES.user}api/v1/auth/token/refresh/`,
             { refresh: refreshToken }
           );
           localStorage.setItem("access_token", data.access);
