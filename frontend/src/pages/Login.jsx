@@ -26,15 +26,12 @@ export default function Login() {
     try {
       const response = await loginUser(credentials);
 
-      if (!response?.access || !response?.refresh) {
-        throw new Error("Invalid server response. Login failed.");
-      }
-<<<<<<< HEAD
-=======
+if (!response?.access || !response?.refresh) {
+  throw new Error("Invalid server response. Login failed.");
+}
 
-      // Use AuthContext to store user and tokens
->>>>>>> 41f097bbaca33df8c3ca060120902b7944de1485
-      login(response);
+// Use AuthContext to store user and tokens
+login(response);
 
       // Redirect to dashboard
       navigate("/dashboard");
