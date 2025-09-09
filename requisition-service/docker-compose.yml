@@ -16,8 +16,10 @@ services:
              done &&
              echo 'Database is up. Applying migrations...' &&
              python manage.py migrate &&
-             echo 'Starting Gunicorn...' &&
-             gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+             echo 'Starting Django server...' &&
+             python manage.py runserver 0.0.0.0:8000 || 
+             (echo 'Falling back to Gunicorn...' &&
+              gunicorn requisition_service.wsgi:application --bind 0.0.0.0:8000 --workers 3)"
     depends_on:
       requisition-db:
         condition: service_healthy
@@ -61,7 +63,6 @@ services:
     image: mysql:8.0
     container_name: requisition-db
     restart: unless-stopped
-    # Map variables from .env to what MySQL container expects
     environment:
       MYSQL_DATABASE: requisition_db
       MYSQL_USER: requisition_service
@@ -74,7 +75,6 @@ services:
     command:
       - --default-authentication-plugin=mysql_native_password
     healthcheck:
-      # Use the correct variables for the healthcheck
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DJANGO_DB_USER}", "-p${DJANGO_DB_PASSWORD}"]
       interval: 10s
       timeout: 5s

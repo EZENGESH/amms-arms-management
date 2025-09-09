@@ -58,5 +58,5 @@ CMD bash -c \
     echo 'Collecting static files...' && \
     python manage.py collectstatic --noinput && \
     echo 'Starting server...' && \
-    exec gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 requisition_service.wsgi:application"
+    exec python manage.py runserver 0.0.0.0:8000 --workers 2 --timeout 120 requisition_service.wsgi:application"
 
