@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const SERVICES = {
-  user: "http://localhost:8001",         
+  user: "http://localhost:8001/",         
   inventory: "http://localhost:8009/",
   requisition: "http://localhost:8003/",
   firearmLog: "http://localhost:8009/",
