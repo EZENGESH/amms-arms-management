@@ -34,10 +34,14 @@ COPY . .
 # Startup script
 # -----------------------------
 CMD bash -c "echo 'Waiting for database...'; \
-while ! nc -z \${DJANGO_DB_HOST} \${DJANGO_DB_PORT} -w 1; do \
+while ! nc -z ${DJANGO_DB_HOST} ${DJANGO_DB_PORT} -w 1; do \
   sleep 1; \
 done; \
-python manage.py collectstatic --noinput; \
+echo 'Running migrations...'; \
 python manage.py migrate --noinput; \
+echo 'Collecting static files...'; \
+python manage.py collectstatic --noinput; \
+echo 'Starting Django server...'; \
 exec python manage.py runserver 0.0.0.0:8000 --insecure"
+
 
