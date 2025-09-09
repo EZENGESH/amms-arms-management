@@ -41,8 +41,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'requisitions',
     'corsheaders',
-    'rest_framework.authtoken',
 ]
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "SIGNING_KEY": SECRET_KEY, 
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React default port
@@ -52,13 +60,14 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'requisitions.authentication.UserServiceAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
 }
+
 
 MIDDLEWARE = [
      'corsheaders.middleware.CorsMiddleware', 

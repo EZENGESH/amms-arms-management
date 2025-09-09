@@ -1,42 +1,47 @@
 import { requisitionApi } from './apiClient';
 
+// ==============================
 // Create a new requisition
+// ==============================
 export async function createRequisition(data) {
   try {
     console.log('Sending requisition data:', JSON.stringify(data, null, 2));
 
-    const response = await requisitionApi.post('api/requisitions/', data, {
-      timeout: 15000, // Longer timeout for creation
-    });
+    const response = await requisitionApi.post('/requisitions/', data, { timeout: 15000 });
 
     console.log('Requisition created successfully:', response.data);
     return response.data;
 
   } catch (error) {
+    const status = error.response?.status;
+
     console.error('Detailed error creating requisition:', {
       message: error.message,
       code: error.code,
-      status: error.response?.status,
+      status,
       data: error.response?.data,
       url: error.config?.url
     });
 
-    throw new Error(
-      error.response?.status === 404
-        ? 'Requisition endpoint not found. Check the backend URL.'
-        : 'Failed to create requisition. Please check if the requisition service is running.'
-    );
+    if (status === 404) {
+      throw new Error('Requisition endpoint not found. Check the backend URL.');
+    }
+    if (status === 401) {
+      throw new Error('Unauthorized. Please log in again.');
+    }
+
+    throw new Error('Failed to create requisition. Please ensure the service is running.');
   }
 }
 
+// ==============================
 // Get all requisitions
+// ==============================
 export async function getRequisitions() {
   try {
-    const response = await requisitionApi.get('/requisitions/', {
-      timeout: 10000,
-    });
+    const response = await requisitionApi.get('/requisitions/', { timeout: 10000 });
 
-    // Support paginated and non-paginated responses
+    // Support multiple response formats
     if (Array.isArray(response.data)) return response.data;
     if (Array.isArray(response.data?.results)) return response.data.results;
     if (Array.isArray(response.data?.data)) return response.data.data;
@@ -51,13 +56,13 @@ export async function getRequisitions() {
       status: error.response?.status
     });
 
-    throw new Error(
-      'Failed to fetch requisitions. Please check if the requisition service is running.'
-    );
+    throw new Error('Failed to fetch requisitions. Ensure the service is running.');
   }
 }
 
+// ==============================
 // Health check for requisition service
+// ==============================
 export async function checkRequisitionServiceHealth() {
   try {
     const response = await requisitionApi.get('/health', { timeout: 5000 });

@@ -1,38 +1,45 @@
-import { useState } from 'react';
-// FIX: useNavigate is no longer needed here as the context handles it.
-import { useAuth } from '../context/AuthContext';
-import AuthLayout from '../layouts/AuthLayout';
-import Button from '../components/Button';
-import { loginUser } from '../services/auth';
+// src/pages/Login.jsx
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../layouts/AuthLayout";
+import Button from "../components/Button";
+import { loginUser } from "../services/auth";
 
 export default function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // prevent full page reload
     setIsLoading(true);
     setError(null);
 
     const formData = new FormData(e.target);
     const credentials = {
-      username: formData.get('username').trim(),
-      password: formData.get('password'),
+      username: formData.get("username").trim(),
+      password: formData.get("password"),
     };
 
     try {
-      const response = await loginUser(credentials); // your API call
-      
-      // FIX: Check for 'access' token, which is the JWT standard.
-      
-      if (!response?.access) {
-        throw new Error('Invalid server response. Login failed.');
+      const response = await loginUser(credentials);
+
+      if (!response?.access || !response?.refresh) {
+        throw new Error("Invalid server response. Login failed.");
       }
+<<<<<<< HEAD
+=======
+
+      // Use AuthContext to store user and tokens
+>>>>>>> 41f097bbaca33df8c3ca060120902b7944de1485
       login(response);
 
+      // Redirect to dashboard
+      navigate("/dashboard");
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
+      setError(err.message || "Login failed.");
     } finally {
       setIsLoading(false);
     }
@@ -41,9 +48,11 @@ export default function Login() {
   return (
     <AuthLayout>
       <h1 className="text-xl font-semibold mb-4">Login to AMMS</h1>
-      
-      {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
-      
+
+      {error && (
+        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
+      )}
+
       <form className="space-y-4" onSubmit={handleSubmit}>
         <input
           name="username"
@@ -62,7 +71,7 @@ export default function Login() {
           disabled={isLoading}
         />
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
       </form>
     </AuthLayout>

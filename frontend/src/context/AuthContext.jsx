@@ -11,14 +11,14 @@ export function AuthProvider({ children }) {
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const accessToken = localStorage.getItem("access_token");
-    const refreshToken = localStorage.getItem("refresh_token");
+    const access = localStorage.getItem("access_token");
+    const refresh = localStorage.getItem("refresh_token");
     const storedUser = localStorage.getItem("user");
 
-    if (accessToken && refreshToken && storedUser) {
+    if (access && refresh && storedUser) {
       setUser({
-        token: accessToken,
-        refreshToken: refreshToken,
+        access,
+        refresh,
         ...JSON.parse(storedUser),
       });
     }
@@ -28,7 +28,10 @@ export function AuthProvider({ children }) {
 
   // Login function
   const login = (authData) => {
-    const userInfo = {
+    const access = authData.access || authData.token;
+    const refresh = authData.refresh || authData.refresh_token;
+
+    const userInfo = authData.user || {
       id: authData.user_id,
       username: authData.username,
       email: authData.email,
@@ -36,13 +39,13 @@ export function AuthProvider({ children }) {
       rank: authData.rank,
     };
 
-    // Store tokens & user info
-    localStorage.setItem("access_token", authData.token);
-    if (authData.refresh_token) localStorage.setItem("refresh_token", authData.refresh_token);
+    if (!access) throw new Error("No access token received from server");
+
+    localStorage.setItem("access_token", access);
+    if (refresh) localStorage.setItem("refresh_token", refresh);
     localStorage.setItem("user", JSON.stringify(userInfo));
 
-    setUser({ token: authData.token, refreshToken: authData.refresh_token, ...userInfo });
-
+    setUser({ access, refresh, ...userInfo });
     navigate("/dashboard");
   };
 
@@ -61,10 +64,10 @@ export function AuthProvider({ children }) {
       const storedRefresh = localStorage.getItem("refresh_token");
       if (!storedRefresh) throw new Error("No refresh token available");
 
-      const data = await refreshTokenAPI(storedRefresh);
+      const data = await refreshTokenAPI(storedRefresh); // expects { token: "..." }
       localStorage.setItem("access_token", data.token);
 
-      setUser((prev) => ({ ...prev, token: data.token }));
+      setUser((prev) => ({ ...prev, access: data.token }));
       return data.token;
     } catch (err) {
       console.error("Refresh token failed:", err);
@@ -74,7 +77,16 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshToken, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout,
+        refreshToken,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
