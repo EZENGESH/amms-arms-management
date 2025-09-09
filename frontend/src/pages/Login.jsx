@@ -29,9 +29,6 @@ export default function Login() {
       if (!response?.access) {
         throw new Error('Invalid server response. Login failed.');
       }
-
-      // FIX: Call the context's login function with the entire response object.
-      // The context will handle extracting the tokens and user data.
       login(response);
 
     } catch (err) {
@@ -48,8 +45,6 @@ export default function Login() {
       {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       
       <form className="space-y-4" onSubmit={handleSubmit}>
-        {/* ... form inputs remain the same ... */}
-{/* ...existing code... */}
         <input
           name="username"
           type="text"
