@@ -12,20 +12,10 @@ export default defineConfig({
       clientPort: 5173 
     },
     proxy: {
-      '/api/v1/users': {
-        target: 'http://localhost:8001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/v1\/users/, '/api/v1/users')
-      },
-      '/api/v1/arms': {
-        target: 'http://localhost:8009',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/v1\/arms/, '/api/v1/arms')
-      },
-      '/api/v1/requisitions': {
-        target: 'http://localhost:8004',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/v1\/requisitions/, '/api/v1/requisitions')
+      proxy: {
+        '/api/v1/user': { target: 'http://localhost:8001' },
+        '/api/arms': { target: 'http://localhost:8009' },
+        '/api/requisitions': { target: 'http://localhost:8003' }
       }
     }
   }
