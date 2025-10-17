@@ -1,12 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
-
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Inventory from './pages/Inventory';
 import RequisitionForm from './pages/RequisitionForm';
 import Reports from './pages/Reports';
-import RegisterForm from './pages/RegisterForm';
 import RequisitionList from './pages/RequisitionList';
 import NotFound from './pages/NotFound';
 import LogFirearm from './pages/LogFirearm';
@@ -19,7 +17,6 @@ function App() {
 
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<RegisterForm />} />
 
       {/* Private routes */}
       <Route 
