@@ -1,5 +1,5 @@
 // src/pages/Login.jsx
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../layouts/AuthLayout";
@@ -12,14 +12,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Ensure browsers don’t autofill any real inputs
-    const random = Math.random().toString(36).substring(2, 8);
-    document.querySelectorAll("input").forEach((input) => {
-      input.setAttribute("autocomplete", "new-" + random);
-      input.setAttribute("aria-autocomplete", "none"); // helps on Safari
-    });
-  }, []);
+  // Ref to directly manipulate password field name
+  const passwordRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +33,6 @@ export default function Login() {
         throw new Error("Invalid server response. Login failed.");
       }
 
-      // Save user data in context
       login(response);
       navigate("/dashboard");
     } catch (err) {
@@ -59,60 +52,52 @@ export default function Login() {
         </div>
       )}
 
+      {/* The trick: remove autocomplete at form level AND randomize password name */}
       <form
         className="space-y-4"
-        onSubmit={handleSubmit}
         autoComplete="off"
+        onSubmit={handleSubmit}
       >
-        {/* 🧩 Hidden fake fields to neutralize autofill */}
+        {/* Fake hidden fields first (trap autofill) */}
         <input
           type="text"
           name="fake_user"
           autoComplete="username"
-          tabIndex="-1"
-          style={{
-            position: "absolute",
-            opacity: 0,
-            height: 0,
-            width: 0,
-            pointerEvents: "none",
-          }}
+          style={{ display: "none" }}
         />
         <input
           type="password"
           name="fake_pass"
-          autoComplete="current-password"
-          tabIndex="-1"
-          style={{
-            position: "absolute",
-            opacity: 0,
-            height: 0,
-            width: 0,
-            pointerEvents: "none",
-          }}
+          autoComplete="new-password"
+          style={{ display: "none" }}
         />
 
-        {/* 🧭 Real fields */}
         <input
           name="username"
           type="text"
           placeholder="Username"
           required
-          autoComplete="new-username"
-          inputMode="text"
-          aria-autocomplete="none"
+          autoComplete="off"
+          spellCheck="false"
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
 
+        {/* password field renamed dynamically to fool Chrome’s detector */}
         <input
-          name="password"
+          ref={passwordRef}
+          name={`pass_${Math.random().toString(36).substring(2, 7)}`}
           type="password"
           placeholder="Password"
           required
           autoComplete="new-password"
-          aria-autocomplete="none"
           inputMode="none"
+          spellCheck="false"
+          onFocus={() => {
+            // randomize name again on focus (kills saved password popup)
+            passwordRef.current.name =
+              "pass_" + Math.random().toString(36).substring(2, 8);
+          }}
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
