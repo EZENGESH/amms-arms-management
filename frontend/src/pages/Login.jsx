@@ -50,7 +50,7 @@ login(response);
         <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
       )}
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4" autoComplete="off" onSubmit={handleSubmit}>
         <input
           name="username"
           type="text"
