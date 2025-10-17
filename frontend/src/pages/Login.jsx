@@ -13,7 +13,7 @@ export default function Login() {
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // prevent full page reload
+    e.preventDefault();
     setIsLoading(true);
     setError(null);
 
@@ -26,14 +26,14 @@ export default function Login() {
     try {
       const response = await loginUser(credentials);
 
-if (!response?.access || !response?.refresh) {
-  throw new Error("Invalid server response. Login failed.");
-}
+      if (!response?.access || !response?.refresh) {
+        throw new Error("Invalid server response. Login failed.");
+      }
 
-// Use AuthContext to store user and tokens
-login(response);
+      // Save tokens & user via context
+      login(response);
 
-      // Redirect to dashboard
+      // Redirect after successful login
       navigate("/dashboard");
     } catch (err) {
       setError(err.message || "Login failed.");
@@ -47,26 +47,40 @@ login(response);
       <h1 className="text-xl font-semibold mb-4">Login to AMMS</h1>
 
       {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
+        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+          {error}
+        </div>
       )}
 
-      <form className="space-y-4" autoComplete="off" onSubmit={handleSubmit}>
+      <form
+        className="space-y-4"
+        onSubmit={handleSubmit}
+        autoComplete="off"
+      >
+        {/* Hidden fake fields to block browser autofill */}
+        <input type="text" name="fakeuser" autoComplete="username" hidden />
+        <input type="password" name="fakepass" autoComplete="new-password" hidden />
+
         <input
           name="username"
           type="text"
           placeholder="Username"
           required
+          autoComplete="new-username"
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
+
         <input
           name="password"
           type="password"
           placeholder="Password"
           required
+          autoComplete="new-password"
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         />
+
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "Logging in..." : "Login"}
         </Button>
