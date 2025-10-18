@@ -15,5 +15,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # ✅ App routes
-    path('api/', include('requisitions.urls')),
+    path('api/', include('requisition_service.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
