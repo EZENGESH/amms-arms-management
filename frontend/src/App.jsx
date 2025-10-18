@@ -12,9 +12,6 @@ import LogFirearm from './pages/LogFirearm';
 function App() {
   return (
     <Routes>
-      {/* Redirect root path to dashboard */}
-      {/*<Route path="/" element={<Navigate to="/dashboard" replace />} />*/}
-
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
 
