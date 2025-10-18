@@ -62,7 +62,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     totalArms: 0,
-    activeRequisitions: 10,
+    activeRequisitions: 0,
     registeredUsers: 0,
     previousStats: {}
   });

@@ -36,11 +36,9 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # React default port
+    "http://localhost:5173", 
 ]
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
- 
-CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -85,7 +83,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'requisition_service.wsgi.application'
 
-
 # Database
 DATABASES = {
     'default': {
@@ -102,7 +99,6 @@ DATABASES = {
         },
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
